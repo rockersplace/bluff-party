@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Schwindelrunde</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#161A33;
+    --ink-2:#1F2547;
+    --ink-3:#2A3163;
+    --gold:#E8B94A;
+    --coral:#E4572E;
+    --cream:#F5EFE4;
+    --muted:#9AA0C3;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, #232a52 0%, transparent 45%),
+      radial-gradient(circle at 100% 100%, #1c2148 0%, transparent 50%),
+      var(--ink);
+    color:var(--cream);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    letter-spacing:-0.01em;
+    margin:0;
+  }
+  .wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    max-width:520px;
+    margin:0 auto;
+    width:100%;
+    padding:20px 18px 40px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .brand .mark{
+    font-family:'Fraunces', serif;
+    font-weight:900;
+    font-style:italic;
+    font-size:26px;
+    color:var(--gold);
+  }
+  .brand .sub{
+    font-size:11px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.12em;
+  }
+  .card{
+    background:var(--ink-2);
+    border:1px solid #333a6b;
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:14px;
+  }
+  label{
+    display:block;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  input[type=text], textarea{
+    width:100%;
+    background:var(--ink);
+    border:1px solid #3a4178;
+    border-radius:10px;
+    color:var(--cream);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:16px;
+    padding:12px 14px;
+    margin-bottom:14px;
+    outline:none;
+  }
+  input[type=text]:focus, textarea:focus{ border-color:var(--gold); }
+  textarea{ resize:vertical; min-height:80px; line-height:1.4; }
+  button{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:15px;
+    border:none;
+    border-radius:10px;
+    padding:14px 18px;
+    cursor:pointer;
+    width:100%;
+    transition:transform .08s ease, opacity .15s ease;
+  }
+  button:active{ transform:scale(0.98); }
+  button.primary{ background:var(--gold); color:#241a05; }
+  button.secondary{ background:transparent; color:var(--cream); border:1px solid #3a4178; }
+  button.danger{ background:transparent; color:var(--coral); border:1px solid #6b3327; }
+  button:disabled{ opacity:.4; cursor:default; }
+  .row{ display:flex; gap:10px; }
+  .row > *{ flex:1; }
+  .code-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    letter-spacing:.25em;
+    font-size:22px;
+    color:var(--gold);
+    background:rgba(232,185,74,.08);
+    border:1px dashed rgba(232,185,74,.5);
+    border-radius:10px;
+    padding:10px 14px;
+    text-align:center;
+  }
+  .players{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+  .chip{
+    display:flex; align-items:center; gap:6px;
+    background:var(--ink-3); border-radius:20px; padding:6px 12px 6px 6px;
+    font-size:13px;
+  }
+  .avatar{
+    width:22px;height:22px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px; font-weight:700; color:#161A33;
+    background:var(--gold);
+    flex-shrink:0;
+  }
+  .muted{ color:var(--muted); font-size:13px; }
+  .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
+  .question{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:600;
+    font-size:20px;
+    line-height:1.4;
+    color:var(--cream);
+    margin:6px 0 16px;
+  }
+  .answer-reveal{
+    background:rgba(232,185,74,.1);
+    border:1px solid rgba(232,185,74,.4);
+    border-radius:10px;
+    padding:12px 14px;
+    font-size:14px;
+    margin-bottom:16px;
+  }
+  .answer-reveal b{ color:var(--gold); }
+  .option-card{
+    position:relative;
+    background:var(--ink-3);
+    border:1px solid #3a4178;
+    border-radius:12px;
+    padding:14px 16px;
+    margin-bottom:12px;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .option-card:hover{ border-color:var(--gold); }
+  .option-card.selected{ border-color:var(--gold); background:rgba(232,185,74,.12); }
+  .option-card.correct{ border-color:var(--gold); background:rgba(232,185,74,.15); }
+  .option-card.wrong-picked{ border-color:var(--coral); background:rgba(228,87,46,.1); }
+  .option-card .stamp{
+    position:absolute; top:10px; right:12px;
+    font-size:10px; font-weight:700; letter-spacing:.08em;
+    padding:3px 8px; border-radius:6px;
+  }
+  .stamp.wahr{ background:var(--gold); color:#241a05; }
+  .stamp.erfunden{ background:var(--coral); color:#2a0d05; }
+  .option-text{ font-size:15px; line-height:1.4; padding-right:60px; }
+  .option-meta{ font-size:11px; color:var(--muted); margin-top:8px; }
+  .scoreboard-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid #2a3163;
+    font-size:14px;
+  }
+  .scoreboard-row:last-child{ border-bottom:none; }
+  .scoreboard-row .pts{ font-weight:700; color:var(--gold); }
+  .progress{ font-size:12px; color:var(--muted); margin-top:10px; }
+  .error{ color:var(--coral); font-size:13px; margin-bottom:10px; min-height:16px; }
+  .topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:16px; font-size:12px; color:var(--muted);
+  }
+  .topbar .code{ color:var(--gold); font-weight:700; letter-spacing:.15em; }
+  .install-hint{
+    margin-top:auto;
+    padding-top:18px;
+    font-size:11px;
+    color:var(--muted);
+    line-height:1.5;
+    text-align:center;
+  }
+  .spinner{
+    display:inline-block; width:14px; height:14px;
+    border:2px solid var(--muted); border-top-color:var(--gold);
+    border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root" class="wrap"></div>
+
+<script>
+// ---------- Fragenkatalog (original, keine Übernahme fremder Kartentexte) ----------
+const QUESTIONS = [
+  {p:"In einem Dorf in den peruanischen Anden begrüßen sich Fremde traditionell, indem sie ____.", a:"sich gegenseitig kurz die Zunge zeigen"},
+  {p:"Der Fachbegriff „Petrichor“ bezeichnet ____.", a:"den charakteristischen Geruch von Regen auf trockener Erde"},
+  {p:"Im mittelalterlichen Island war es Gesetz, dass jeder Mann, der einen Bären tötete, ____.", a:"dessen Fell dem König überlassen musste"},
+  {p:"Oktopusse besitzen drei Herzen, von denen zwei ____.", a:"beim Schwimmen aussetzen, weshalb sie lieber krabbeln"},
+  {p:"Das englische Wort „quarantine“ stammt vom italienischen Wort für ____.", a:"vierzig (Tage Isolationszeit für Schiffe)"},
+  {p:"In der Stadt Chester in England ist es einer alten, nie aufgehobenen Verordnung zufolge erlaubt, ____.", a:"einen Schotten mit Pfeil und Bogen zu erschießen – außer an Sonntagen"},
+  {p:"Der kürzeste im Guinnessbuch erfasste Krieg der Geschichte dauerte ____.", a:"etwa 38 Minuten (Britisch-Sansibar-Krieg, 1896)"},
+  {p:"Flamingos sind von Natur aus grau; ihre rosa Farbe entsteht ____.", a:"durch Farbstoffe aus den Krebstieren und Algen, die sie fressen"},
+  {p:"Das erste Emoji-artige Symbol in einem gedruckten Text erschien bereits ____.", a:"1862, als Abraham Lincoln in einem Redemanuskript einen Smiley skizzierte"},
+  {p:"In Japan gibt es einen Beruf namens „Oshiya“, dessen Aufgabe es ist, ____.", a:"Fahrgäste während der Stoßzeit in überfüllte Züge zu drücken"},
+  {p:"Der Begriff „Sisu“ aus dem Finnischen beschreibt ____.", a:"eine Mischung aus Durchhaltevermögen, Sturheit und stillem Mut"},
+  {p:"Napoleon hatte angeblich panische Angst vor ____.", a:"Katzen"},
+  {p:"Die Great Emu War 1932 in Australien war ein militärischer Feldzug gegen ____.", a:"wildlebende Emus, die Getreidefelder zerstörten – die Armee verlor haushoch"},
+  {p:"Ein Tag auf der Venus dauert länger als ____.", a:"ein Jahr auf der Venus"},
+  {p:"Das norwegische Wort „Utepils“ bezeichnet speziell ____.", a:"das erste Bier, das man im Jahr draußen in der Sonne trinkt"},
+  {p:"Bis ins 19. Jahrhundert wurde Ketchup in manchen Ländern verkauft als ____.", a:"Medikament gegen Verdauungsbeschwerden, in Pillenform"},
+  {p:"Der Toaster wurde vor dem geschnittenen Brot erfunden, weshalb ____.", a:"die ersten Toaster für ganze, ungeschnittene Brotlaibe ausgelegt waren"},
+  {p:"Die schottische Nationaltier ist offiziell ____.", a:"das Einhorn"},
+  {p:"Eine Gruppe von Flamingos nennt man im Englischen ____.", a:"a flamboyance"},
+  {p:"In Teilen Sibiriens gilt es als Kompliment, wenn man einem Gast sagt, er habe ____.", a:"„die Wände zum Weinen gebracht“ – gemeint ist überwältigende Gastfreundschaft"},
+  {p:"Das schwedische Wort „Mångata“ beschreibt ____.", a:"das Spiegelbild des Mondlichts auf Wasser, das wie eine Straße aussieht"},
+  {p:"Wombat-Kot hat eine besondere Eigenschaft: er ist ____.", a:"würfelförmig, damit er nicht wegrollt und als Duftmarke liegen bleibt"},
+  {p:"Die längste jemals gemessene Zeitspanne zwischen zwei Zwillingsgeburten betrug ____.", a:"87 Tage"},
+  {p:"Im alten Rom galt Urin lange als wertvoller Rohstoff, weil ____.", a:"er zum Bleichen und Reinigen von Wäsche sowie Gerben von Leder benutzt wurde"},
+  {p:"Der Nachname des Erfinders der Braille-Schrift, Louis Braille, bedeutet im Französischen ursprünglich ____.", a:"nichts Besonderes – es ist einfach ein Familienname; die Verwechslung mit „braille“ (blind) ist Zufall"},
+  {p:"Kolibris sind die einzigen Vögel, die ____.", a:"rückwärts fliegen können"},
+  {p:"In Bhutan wird der nationale Wohlstand nicht am BIP gemessen, sondern am ____.", a:"„Bruttonationalglück“ (Gross National Happiness)"},
+  {p:"Die Melodie von „Happy Birthday to You“ war jahrzehntelang urheberrechtlich geschützt, bis ____.", a:"ein Gericht 2015/2016 entschied, dass die Rechte nie gültig übertragen worden waren"},
+  {p:"Haie gibt es der Fossilienlage nach schon länger auf der Erde als ____.", a:"Bäume"},
+  {p:"In den Niederlanden ist es gesetzlich erlaubt, dass Radfahrer ____.", a:"bei Rot über bestimmte Kreuzungen abbiegen dürfen, wenn ein grüner Pfeil für Radler steht"},
+  {p:"Der Grund, warum Bananen offiziell als „Beeren“ gelten, botanisch aber Erdbeeren nicht, ist ____.", a:"dass sich eine Beere aus einer einzigen Blüte mit einem Fruchtknoten entwickelt – bei Erdbeeren stimmt das nicht"},
+  {p:"Ein einzelnes Blitz-Entladung kann die Luft um sich herum kurzzeitig heißer machen als ____.", a:"die Oberfläche der Sonne"},
+  {p:"Das Wort „Robot“ wurde erstmals in einem Theaterstück verwendet und stammt vom tschechischen Wort für ____.", a:"Zwangsarbeit / Frondienst"},
+  {p:"In Teilen des antiken Ägyptens wurden Katzen so verehrt, dass ____.", a:"auf ihre Tötung die Todesstrafe stand – selbst für Ausländer"},
+  {p:"Der Effekt, dass man beim Gähnen eines anderen automatisch mitgähnt, hängt vermutlich zusammen mit ____.", a:"Empathie und sozialer Bindung zwischen Gruppenmitgliedern"},
+
+  // ---- Wahr oder falsch? ----
+  {p:"Schokolade wurde ursprünglich vor allem als bitteres Getränk getrunken, nicht als süße Tafel.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Mount Everest wächst jedes Jahr um einige Millimeter weiter.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Goldfische haben ein Gedächtnis von nur wenigen Sekunden.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die Chinesische Mauer ist vom Mond aus mit bloßem Auge sichtbar.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Honig kann theoretisch tausende Jahre haltbar bleiben, ohne zu verderben.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Blitze schlagen niemals zweimal an derselben Stelle ein.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Fingerabdruck eines Koalas ähnelt dem eines Menschen so stark, dass er selbst Fachleute täuschen kann.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Bananenstauden sind botanisch gesehen Kräuter und keine Bäume.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Im Weltraum bleibt Schweiß in kleinen Kugeln an der Haut haften, statt herunterzutropfen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die Sahara war vor einigen tausend Jahren eine grüne, wasserreiche Landschaft mit Seen und Flüssen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Ein durchschnittlicher Mensch verschluckt im Schlaf regelmäßig kleine Spinnen.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Delfine schlafen, indem immer nur eine Gehirnhälfte gleichzeitig ruht.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die Farbe Orange wurde nach der Frucht benannt und nicht umgekehrt.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Napoleon war für seine Zeit außergewöhnlich klein gewachsen.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Wale können pfeifen, um sich über hunderte Kilometer hinweg zu verständigen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+
+  // ---- Schräge Ereignisse ----
+  {p:"1518 brach in Straßburg eine mysteriöse Massenbewegung aus, bei der hunderte Menschen wochenlang wie im Fieber ____.", a:"tanzten, bis manche vor Erschöpfung zusammenbrachen (die „Tanzplage von Straßburg“)", cat:"Schräges Ereignis"},
+  {p:"1919 ergoss sich in Boston eine tödliche Flutwelle aus ____ durch die Straßen, nachdem ein riesiger Lagertank geplatzt war.", a:"Sirup/Melasse – über zwei Millionen Liter auf einmal", cat:"Schräges Ereignis"},
+  {p:"1925 eskalierte an der griechisch-bulgarischen Grenze fast ein Krieg, weil ____.", a:"ein Soldat seinem über die Grenze gelaufenen Hund hinterherlief und daraufhin erschossen wurde", cat:"Schräges Ereignis"},
+  {p:"1876 berichteten Augenzeugen in Kentucky, dass buchstäblich ____ vom Himmel fiel.", a:"rohes Fleisch in Fetzen – bis heute wird über die genaue Ursache gerätselt", cat:"Schräges Ereignis"},
+  {p:"Beim jährlichen Wettbewerb am Cooper's Hill in England jagen Teilnehmer:innen einen ____ einen steilen Hügel hinunter.", a:"runden Laib Doppelrahm-Gloucester-Käse, wobei viele dabei stürzen", cat:"Schräges Ereignis"},
+  {p:"1810 bestellte ein Trickbetrüger in London tausende Waren und Handwerker an eine einzige, ahnungslose Adresse, was zu ____ führte.", a:"einem gigantischen Verkehrschaos vor dem Haus des Opfers (der „Berners Street Hoax“)", cat:"Schräges Ereignis"},
+  {p:"In der Geschichte Prags eskalierten politische Konflikte mehrfach dadurch, dass Kontrahenten ____.", a:"aus Fenstern geworfen wurden – die sogenannten „Prager Fenstersürze“", cat:"Schräges Ereignis"},
+  {p:"Während der niederländischen „Tulpenmanie“ im 17. Jahrhundert kostete eine einzige seltene Tulpenzwiebel zeitweise mehr als ____.", a:"ein ganzes Haus in Amsterdam", cat:"Schräges Ereignis"},
+  {p:"1816 gab es in weiten Teilen der nördlichen Hemisphäre praktisch keinen Sommer, weil ____.", a:"der Ausbruch des Vulkans Tambora ein Jahr zuvor die Atmosphäre stark abkühlte", cat:"Schräges Ereignis"},
+  {p:"1957 überzeugte ein bekannter Fernsehsender in einer seriös wirkenden Reportage viele Zuschauer davon, dass ____.", a:"Spaghetti auf Bäumen wachsen und dort geerntet werden", cat:"Schräges Ereignis"},
+  {p:"Beim „Great Stork Derby“ im kanadischen Toronto vererbte ein Anwalt sein Vermögen an ____.", a:"die Frau, die in zehn Jahren die meisten Kinder zur Welt brachte", cat:"Schräges Ereignis"},
+  {p:"In den 1920er-Jahren gelang es einem Trickbetrüger gleich zweimal, ____.", a:"den Eiffelturm an ahnungslose Schrotthändler zu verkaufen, obwohl er ihm gar nicht gehörte", cat:"Schräges Ereignis"},
+  {p:"1869 wurde in New York ein angeblich versteinerter, drei Meter großer „Riese“ ausgegraben, der sich später als ____ herausstellte.", a:"eine plumpe Fälschung aus Gips, vergraben von einem Geschäftsmann, um Schaulustige anzulocken", cat:"Schräges Ereignis"},
+  {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"}
+];
+
+// ---------- Storage helpers (Claudes offizielle Artefakt-Speicherfunktion) ----------
+// Funktioniert nur, wenn dieses Artefakt veröffentlicht ("Publish") wurde.
+async function sGet(key, shared){
+  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
+  catch(e){ return null; }
+}
+async function sSet(key, value, shared){
+  try{ return await window.storage.set(key, value, !!shared); }
+  catch(e){ return null; }
+}
+async function sList(prefix, shared){
+  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
+  catch(e){ return []; }
+}
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+function makeCode(){
+  const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let c=""; for(let i=0;i<4;i++) c+=letters[Math.floor(Math.random()*letters.length)];
+  return c;
+}
+function initials(name){
+  return (name||"?").trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2).toUpperCase();
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// ---------- App state ----------
+const root = document.getElementById('root');
+let me = { id: uid(), name: "", code: "" };
+let joined = false;
+let pollTimer = null;
+let localSelectedOption = null; // during voting, before vote is saved
+let localAnswerDraft = "";
+let errorMsg = "";
+let lobbyRoundsDraft = 8;
+let cache = { players: [], game: null, scores: {} };
+
+function playersKey(){ return `room:${me.code}:players`; }
+function gameKey(){ return `room:${me.code}:game`; }
+function scoresKey(){ return `room:${me.code}:scores`; }
+function subKey(round, pid){ return `room:${me.code}:sub:${round}:${pid}`; }
+function subPrefix(round){ return `room:${me.code}:sub:${round}:`; }
+function voteKey(round, pid){ return `room:${me.code}:vote:${round}:${pid}`; }
+function votePrefix(round){ return `room:${me.code}:vote:${round}:`; }
+
+async function refresh(){
+  if(!joined) return;
+  const [playersRaw, gameRaw, scoresRaw] = await Promise.all([
+    sGet(playersKey(), true), sGet(gameKey(), true), sGet(scoresKey(), true)
+  ]);
+  cache.players = playersRaw ? JSON.parse(playersRaw) : [];
+  cache.game = gameRaw ? JSON.parse(gameRaw) : null;
+  cache.scores = scoresRaw ? JSON.parse(scoresRaw) : {};
+  render();
+}
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refresh, 2200);
+}
+
+// ---------- Actions ----------
+async function joinRoom(name, code, isNew){
+  errorMsg = "";
+  name = name.trim(); code = code.trim().toUpperCase();
+  if(!name){ errorMsg = "Bitte gib deinen Namen ein."; render(); return; }
+  if(!code || code.length<3){ errorMsg = "Bitte gib einen gültigen Raumcode ein."; render(); return; }
+  me.name = name; me.code = code;
+
+  // Mehrere Personen können fast zeitgleich beitreten. Da die letzte
+  // Schreibaktion gewinnt, könnte der eigene Eintrag sonst überschrieben
+  // werden. Deshalb: schreiben, gegenprüfen, bei Bedarf wiederholen.
+  let joinedSuccessfully = false;
+  for(let attempt=0; attempt<6 && !joinedSuccessfully; attempt++){
+    if(attempt>0) await new Promise(r=>setTimeout(r, 150 + Math.random()*300));
+    let playersRaw = await sGet(playersKey(), true);
+    let players = playersRaw ? JSON.parse(playersRaw) : [];
+    if(!players.find(p=>p.id===me.id)){
+      players.push({ id: me.id, name: me.name });
+      await sSet(playersKey(), JSON.stringify(players), true);
+    }
+    const check = await sGet(playersKey(), true);
+    const checkList = check ? JSON.parse(check) : [];
+    joinedSuccessfully = !!checkList.find(p=>p.id===me.id);
+  }
+  if(!joinedSuccessfully){
+    errorMsg = "Beitritt hat gerade nicht geklappt (zu viele gleichzeitige Beitritte). Bitte noch einmal auf „Raum beitreten“ tippen.";
+    render();
+    return;
+  }
+
+  let gameRaw = await sGet(gameKey(), true);
+  if(!gameRaw){
+    const game = { phase:"lobby", round:0, readerId:null, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
+    await sSet(gameKey(), JSON.stringify(game), true);
+  }
+  let scoresRaw = await sGet(scoresKey(), true);
+  if(!scoresRaw){
+    await sSet(scoresKey(), JSON.stringify({}), true);
+  }
+  joined = true;
+  startPolling();
+  await refresh();
+}
+
+function pickQuestionIndex(used){
+  const free = QUESTIONS.map((_,i)=>i).filter(i=>!used.includes(i));
+  const pool = free.length ? free : QUESTIONS.map((_,i)=>i);
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+// Baut den Rundenzustand passend zum Fragetyp: normale Fragen starten bei
+// "writing" (Antworten erfinden), Wahr/Falsch-Fragen springen direkt zur
+// Abstimmung, weil dort nichts erfunden werden muss.
+function buildRoundPatch(qIndex){
+  const q = QUESTIONS[qIndex];
+  if(q.type === "truefalse"){
+    const options = shuffle([
+      { authorId: q.a ? "__CORRECT__" : "__WRONG__", text: "Wahr" },
+      { authorId: q.a ? "__WRONG__" : "__CORRECT__", text: "Falsch" }
+    ]);
+    return { phase: "voting", questionIndex: qIndex, options };
+  }
+  return { phase: "writing", questionIndex: qIndex, options: null };
+}
+
+// Leichte Rechtschreib-/Formatglättung: keine echte Fehlerkorrektur (dafür
+// bräuchte es ein Wörterbuch), aber Groß-/Kleinschreibung, doppelte
+// Leerzeichen und Satzzeichen werden vereinheitlicht, damit Tippfehler oder
+// fehlende Punkte nicht verraten, wer eine Antwort geschrieben hat.
+function beautifyText(text){
+  let t = text.trim().replace(/\s+/g, ' ');
+  if(t.length === 0) return t;
+  t = t.charAt(0).toUpperCase() + t.slice(1);
+  t = t.replace(/([.!?]\s+)([a-zäöüß])/g, (m,p1,p2)=>p1+p2.toUpperCase());
+  t = t.replace(/([.!?]){2,}/g, '$1');
+  t = t.replace(/\s+([,.!?])/g, '$1');
+  if(!/[.!?]$/.test(t)) t += '.';
+  return t;
+}
+
+async function startGame(rounds){
+  const players = cache.players;
+  if(players.length < 2) return;
+  const totalRounds = (rounds && rounds > 0) ? rounds : 8;
+  const qIndex = pickQuestionIndex([]);
+  const patch = buildRoundPatch(qIndex);
+  const game = {
+    round:1, readerId: players[0].id, usedQuestions:[qIndex],
+    totalRounds, tally:null, votes:null, correctIdx:null, ...patch
+  };
+  await sSet(gameKey(), JSON.stringify(game), true);
+  await refresh();
+}
+
+async function resetGame(){
+  const game = { phase:"lobby", round:0, readerId:null, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
+  await sSet(gameKey(), JSON.stringify(game), true);
+  await sSet(scoresKey(), JSON.stringify({}), true);
+  await refresh();
+}
+
+async function submitAnswer(){
+  const text = beautifyText(localAnswerDraft);
+  if(!text) return;
+  await sSet(subKey(cache.game.round, me.id), JSON.stringify({ name: me.name, text }), true);
+  localAnswerDraft = "";
+  await refresh();
+}
+
+async function countSubmissions(){
+  const keys = await sList(subPrefix(cache.game.round), true);
+  return keys.length;
+}
+
+async function goToVoting(){
+  const game = cache.game;
+  const keys = await sList(subPrefix(game.round), true);
+  const subs = [];
+  for(const k of keys){
+    const raw = await sGet(k, true);
+    if(raw){ const v = JSON.parse(raw); subs.push({ authorId: k.split(":").pop(), text: v.text }); }
+  }
+  const q = QUESTIONS[game.questionIndex];
+  const options = shuffle([
+    { authorId: "__CORRECT__", text: q.a },
+    ...subs
+  ]);
+  const updated = { ...game, phase:"voting", options };
+  await sSet(gameKey(), JSON.stringify(updated), true);
+  await refresh();
+}
+
+async function castVote(optionIdx){
+  await sSet(voteKey(cache.game.round, me.id), String(optionIdx), true);
+  localSelectedOption = optionIdx;
+  await refresh();
+}
+
+async function countVotes(){
+  const keys = await sList(votePrefix(cache.game.round), true);
+  return keys.length;
+}
+
+async function revealResults(){
+  const game = cache.game;
+  const keys = await sList(votePrefix(game.round), true);
+  const votes = {};
+  for(const k of keys){
+    const pid = k.split(":").pop();
+    const raw = await sGet(k, true);
+    votes[pid] = raw !== null ? parseInt(raw,10) : null;
+  }
+  const tally = game.options.map(()=>0);
+  Object.values(votes).forEach(idx=>{ if(idx!==null && tally[idx]!==undefined) tally[idx]++; });
+
+  const correctIdx = game.options.findIndex(o=>o.authorId==="__CORRECT__");
+  const scores = { ...cache.scores };
+  cache.players.forEach(p=>{ if(!(p.id in scores)) scores[p.id]=0; });
+
+  // Punkt fürs richtige Erraten
+  Object.entries(votes).forEach(([pid, idx])=>{
+    if(idx===correctIdx){ scores[pid] = (scores[pid]||0) + 1; }
+  });
+  // Punkt für jede Person, die auf eine erfundene Antwort hereingefallen ist
+  // (bei Wahr/Falsch-Fragen gibt es keine erfundenen Antworten von Spielern,
+  // daher nur werten, wenn die Option wirklich von jemandem stammt)
+  game.options.forEach((opt, idx)=>{
+    const isRealAuthor = cache.players.some(p=>p.id===opt.authorId);
+    if(isRealAuthor && idx!==correctIdx){
+      const foolCount = Object.values(votes).filter(v=>v===idx).length;
+      scores[opt.authorId] = (scores[opt.authorId]||0) + foolCount;
+    }
+  });
+
+  await sSet(scoresKey(), JSON.stringify(scores), true);
+  const updated = { ...game, phase:"reveal", tally, votes, correctIdx };
+  await sSet(gameKey(), JSON.stringify(updated), true);
+  await refresh();
+}
+
+async function nextRound(){
+  const game = cache.game;
+  const players = cache.players;
+  const curIdx = players.findIndex(p=>p.id===game.readerId);
+  const nextReader = players[(curIdx+1) % players.length].id;
+  const qIndex = pickQuestionIndex(game.usedQuestions);
+  const patch = buildRoundPatch(qIndex);
+  const updated = {
+    ...game, round: game.round+1, readerId: nextReader,
+    usedQuestions:[...game.usedQuestions, qIndex],
+    tally:null, votes:null, correctIdx:null, ...patch
+  };
+  await sSet(gameKey(), JSON.stringify(updated), true);
+  await refresh();
+}
+
+// ---------- Render ----------
+function el(tag, props, ...children){
+  const e = document.createElement(tag);
+  if(props) Object.entries(props).forEach(([k,v])=>{
+    if(k==="class") e.className = v;
+    else if(k.startsWith("on") && typeof v==="function") e.addEventListener(k.slice(2), v);
+    else if(v!==undefined && v!==null) e.setAttribute(k, v);
+  });
+  children.flat().forEach(c=>{
+    if(c===null || c===undefined) return;
+    e.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  });
+  return e;
+}
+
+let connTestResult = "";
+async function testConnection(){
+  connTestResult = "Teste Speicherfunktion …";
+  render();
+  if(typeof window.storage === 'undefined'){
+    connTestResult = "window.storage ist nicht verfügbar. Das Artefakt muss veröffentlicht sein, damit die Speicherfunktion überhaupt existiert.";
+    render();
+    return;
+  }
+  const steps = [];
+  try{
+    const testValue = "test-" + Date.now();
+    const setResult = await window.storage.set('__verbindungstest__', testValue, true);
+    steps.push(`Schreiben: ${setResult ? 'ok ✓' : 'fehlgeschlagen ✗'}`);
+    const getResult = await window.storage.get('__verbindungstest__', true);
+    const readBack = getResult ? getResult.value : null;
+    steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
+  }catch(e){
+    steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
+  }
+  connTestResult = steps.join(' · ');
+  render();
+}
+
+function renderJoinScreen(){
+  const nameInput = el('input', {type:'text', placeholder:'z. B. Marie', value: me.name});
+  nameInput.addEventListener('input', e=>{ me.name = e.target.value; });
+  const codeInput = el('input', {type:'text', placeholder:'z. B. FXQK', value: me.code, style:'text-transform:uppercase; letter-spacing:.15em;'});
+  codeInput.addEventListener('input', e=>{ me.code = e.target.value.toUpperCase(); });
+
+  const joinBtn = el('button', {class:'primary', onclick: ()=>joinRoom(me.name, me.code, false)}, 'Raum beitreten');
+  const createBtn = el('button', {class:'secondary', onclick: ()=>{ const c = makeCode(); codeInput.value = c; me.code = c; }}, 'Neuen Raumcode erzeugen');
+  const testBtn = el('button', {class:'secondary', onclick: testConnection}, 'Verbindung testen (Diagnose)');
+
+  return el('div', null,
+    el('div', {class:'brand'},
+      el('span', {class:'mark'}, 'Schwindelrunde'),
+      el('span', {class:'sub'}, 'Bluff-Partyspiel')
+    ),
+    el('div', {class:'card'},
+      el('label', null, 'Dein Name'),
+      nameInput,
+      el('label', null, 'Raumcode'),
+      codeInput,
+      el('div', {class:'error'}, errorMsg),
+      el('div', {class:'row'}, joinBtn),
+      el('div', {style:'height:8px'}),
+      el('div', {class:'row'}, createBtn),
+      el('div', {style:'height:8px'}),
+      el('div', {class:'row'}, testBtn),
+      connTestResult ? el('div', {class:'hint', style:'margin-top:10px'}, connTestResult) : null,
+      el('div', {class:'hint'}, 'Eine Person erzeugt einen Raumcode und sagt ihn den anderen. Alle öffnen diese Seite auf ihrem Handy, geben Namen + denselben Code ein und tippen „Raum beitreten“.')
+    ),
+    el('div', {class:'install-hint'},
+      'Tipp fürs Handy: Über das Teilen-Menü eures Browsers „Zum Home-Bildschirm hinzufügen“ wählen – dann startet die Seite wie eine App, direkt vom Icon aus.'
+    )
+  );
+}
+
+function renderTopbar(){
+  return el('div', {class:'topbar'},
+    el('span', null, me.name),
+    el('span', {class:'code'}, me.code)
+  );
+}
+
+function renderPlayers(){
+  return el('div', {class:'players'},
+    cache.players.map(p=>el('div', {class:'chip'},
+      el('div', {class:'avatar'}, initials(p.name)),
+      el('span', null, p.name + (p.id===me.id ? ' (du)' : ''))
+    ))
+  );
+}
+
+function renderLobby(){
+  const enough = cache.players.length >= 2;
+  const roundsInput = el('input', {type:'text', inputmode:'numeric', placeholder:'z. B. 8'});
+  roundsInput.value = String(lobbyRoundsDraft);
+  roundsInput.addEventListener('input', e=>{
+    const digits = e.target.value.replace(/[^0-9]/g,'');
+    lobbyRoundsDraft = digits ? parseInt(digits,10) : '';
+  });
+  return el('div', null,
+    renderTopbar(),
+    el('div', {class:'card'},
+      el('h2', null, 'Warteraum'),
+      el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind, dann kann jede:r starten. (Vorübergehend zum Testen abgesenkt – für die richtige Bluff-Dynamik sind später 3+ empfehlenswert.)'),
+      renderPlayers(),
+      el('div', {style:'height:10px'}),
+      el('label', null, 'Rundenzahl'),
+      roundsInput,
+      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Jede Person kommt so oft als Vorleser:in dran, bis diese Rundenzahl erreicht ist.'),
+      el('button', {class:'primary', disabled: !enough ? 'true' : undefined,
+        onclick: ()=>startGame(lobbyRoundsDraft && lobbyRoundsDraft>0 ? lobbyRoundsDraft : 8)
+      }, enough ? 'Spiel starten' : `Noch ${2-cache.players.length} Spieler:in(nen) nötig`)
+    )
+  );
+}
+
+function renderWriting(){
+  const game = cache.game;
+  const q = QUESTIONS[game.questionIndex];
+  const iAmReader = game.readerId === me.id;
+  const readerName = (cache.players.find(p=>p.id===game.readerId)||{}).name || '?';
+
+  const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
+  const body = [
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName}`),
+    el('div', {class:'question'}, q.p)
+  ];
+
+  if(iAmReader){
+    body.push(
+      el('div', {class:'answer-reveal'}, el('b', null, 'Echte Antwort (nur du siehst das): '), q.a),
+      el('div', {class:'progress', id:'sub-progress'}, 'Warte auf Antworten der anderen …'),
+      el('button', {class:'primary', style:'margin-top:14px', onclick: goToVoting}, 'Zur Abstimmung wechseln')
+    );
+  } else {
+    const ta = el('textarea', {
+      placeholder:'Denk dir eine möglichst überzeugende, aber erfundene Antwort aus …',
+      spellcheck:'true', lang:'de', autocapitalize:'sentences', autocorrect:'on'
+    });
+    ta.value = localAnswerDraft;
+    ta.addEventListener('input', e=>{ localAnswerDraft = e.target.value; });
+    body.push(
+      el('label', null, 'Deine erfundene Antwort'),
+      ta,
+      el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; await submitAnswer(); } }, 'Antwort abschicken'),
+      el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.')
+    );
+  }
+
+  const card = el('div', {class:'card'}, ...body);
+  const wrap = el('div', null, renderTopbar(), card);
+
+  // Fortschritt asynchron nachladen (nicht blockierend)
+  countSubmissions().then(n=>{
+    const nonReaderCount = cache.players.length - 1;
+    const progEl = card.querySelector('#sub-progress');
+    if(progEl) progEl.textContent = `${n} von ${nonReaderCount} Antworten sind da.`;
+    if(!iAmReader){
+      const already = cache.players.length; // no-op guard
+    }
+  });
+
+  return wrap;
+}
+
+function renderVoting(){
+  const game = cache.game;
+  const iAmReader = game.readerId === me.id;
+  const readerName = (cache.players.find(p=>p.id===game.readerId)||{}).name || '?';
+  const q = QUESTIONS[game.questionIndex];
+
+  const optionEls = game.options.map((opt, idx)=>{
+    const isMine = opt.authorId === me.id;
+    const card = el('div', {class:'option-card' + (localSelectedOption===idx?' selected':'')},
+      el('div', {class:'option-text'}, opt.text),
+      isMine ? el('div', {class:'option-meta'}, 'Das ist deine eigene Antwort') : null
+    );
+    if(!iAmReader && !isMine){
+      card.addEventListener('click', ()=>castVote(idx));
+    }
+    return card;
+  });
+
+  const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
+  const body = [
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName}`),
+    el('div', {class:'question'}, q.p),
+    ...optionEls
+  ];
+
+  if(iAmReader){
+    body.push(
+      el('div', {class:'progress', id:'vote-progress'}, 'Warte auf die Stimmen …'),
+      el('button', {class:'primary', style:'margin-top:10px', onclick: revealResults}, 'Ergebnis zeigen')
+    );
+  } else {
+    body.push(el('div', {class:'hint'}, 'Tippe auf die Antwort, die du für die echte hältst.'));
+  }
+
+  const card = el('div', {class:'card'}, ...body);
+  const wrap = el('div', null, renderTopbar(), card);
+
+  countVotes().then(n=>{
+    const votersExpected = cache.players.length - 1;
+    const progEl = card.querySelector('#vote-progress');
+    if(progEl) progEl.textContent = `${n} von ${votersExpected} Stimmen abgegeben.`;
+  });
+
+  return wrap;
+}
+
+function renderReveal(){
+  const game = cache.game;
+  const iAmReader = game.readerId === me.id;
+
+  const optionEls = game.options.map((opt, idx)=>{
+    const isCorrect = idx === game.correctIdx;
+    const votesFor = game.tally ? game.tally[idx] : 0;
+    const author = cache.players.find(p=>p.id===opt.authorId) || null;
+    const card = el('div', {class:'option-card ' + (isCorrect ? 'correct' : '')},
+      el('div', {class:'stamp ' + (isCorrect?'wahr':'erfunden')}, isCorrect ? 'WAHR' : 'ERFUNDEN'),
+      el('div', {class:'option-text'}, opt.text),
+      el('div', {class:'option-meta'},
+        isCorrect ? 'Richtige Antwort' : (author ? `Erfunden von ${author.name}` : 'Falsche Option'),
+        ` · ${votesFor} Stimme(n)`
+      )
+    );
+    return card;
+  });
+
+  const sorted = cache.players.slice().sort((a,b)=>(cache.scores[b.id]||0)-(cache.scores[a.id]||0));
+  const scoreRows = sorted.map((p,i)=>el('div', {class:'scoreboard-row'},
+    el('span', null, (i===0 ? '🏆 ' : '') + p.name + (p.id===me.id?' (du)':'')),
+    el('span', {class:'pts'}, String(cache.scores[p.id]||0))
+  ));
+
+  const isFinalRound = game.totalRounds && game.round >= game.totalRounds;
+
+  const body = [
+    el('h3', null, 'Auflösung'),
+    ...optionEls,
+    el('div', {style:'height:6px'}),
+    el('h3', null, isFinalRound ? 'Endstand' : 'Punktestand'),
+    ...scoreRows
+  ];
+
+  if(isFinalRound){
+    body.unshift(el('div', {class:'muted'}, `Letzte Runde (${game.round} von ${game.totalRounds}) gespielt 🎉`));
+    if(iAmReader){
+      body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
+    } else {
+      body.push(el('div', {class:'hint', style:'margin-top:10px'}, `Warte, bis ${(cache.players.find(p=>p.id===game.readerId)||{}).name} ein neues Spiel startet.`));
+    }
+  } else if(iAmReader){
+    body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: nextRound}, 'Nächste Runde'));
+  } else {
+    body.push(el('div', {class:'hint', style:'margin-top:10px'}, `Warte, bis ${(cache.players.find(p=>p.id===game.readerId)||{}).name} die nächste Runde startet.`));
+  }
+
+  return el('div', null, renderTopbar(), el('div', {class:'card'}, ...body));
+}
+
+function render(){
+  root.innerHTML = "";
+  if(!joined){
+    root.appendChild(renderJoinScreen());
+    return;
+  }
+  if(!cache.game || cache.game.phase === "lobby"){
+    root.appendChild(renderLobby());
+  } else if(cache.game.phase === "writing"){
+    root.appendChild(renderWriting());
+  } else if(cache.game.phase === "voting"){
+    root.appendChild(renderVoting());
+  } else if(cache.game.phase === "reveal"){
+    root.appendChild(renderReveal());
+  }
+}
+
+if(typeof window.storage === 'undefined'){
+  root.appendChild(el('div', null,
+    el('div', {class:'brand'},
+      el('span', {class:'mark'}, 'Schwindelrunde'),
+      el('span', {class:'sub'}, 'Bluff-Partyspiel')
+    ),
+    el('div', {class:'card'},
+      el('h2', null, 'Bitte zuerst veröffentlichen'),
+      el('p', {class:'hint'}, 'Diese Speicherfunktion ist Teil von Claudes Artefakten, funktioniert laut Anthropics Hilfe-Center aber erst, nachdem das Artefakt veröffentlicht wurde. Bitte oben im Artefakt-Fenster (z. B. über den kleinen Pfeil neben „Kopieren“) nach „Publish“ bzw. „Veröffentlichen“ suchen und das Artefakt veröffentlichen. Danach diese Seite über den neuen, veröffentlichten Link erneut öffnen.')
+    )
+  ));
+} else {
+  render();
+}
+</script>
+</body>
+</html>
