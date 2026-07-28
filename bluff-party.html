@@ -237,7 +237,8 @@ const firebaseConfig = {
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
-  getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, runTransaction
+  getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, runTransaction,
+  getDocs, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
@@ -609,7 +610,27 @@ async function startGame(rounds){
   });
 }
 
+// Löscht alle Dokumente einer Subcollection (in Batches von 500, dem
+// Firestore-Limit pro Batch-Schreibvorgang).
+async function clearCollection(colRef){
+  const snap = await getDocs(colRef);
+  if(snap.empty) return;
+  const docs = snap.docs;
+  for(let i=0; i<docs.length; i+=500){
+    const batch = writeBatch(db);
+    docs.slice(i, i+500).forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+  }
+}
+
 async function resetGame(){
+  // Alte Antworten/Stimmen müssen mitgelöscht werden - sonst würden bei einer
+  // neuen Partie mit denselben Rundennummern (1, 2, 3, ...) die Karteileichen
+  // aus der vorherigen Partie fälschlich mitgezählt werden.
+  await Promise.all([
+    clearCollection(submissionsCol()),
+    clearCollection(votesCol())
+  ]);
   await updateDoc(roomRef(), { game: initialGame(), scores: {} });
 }
 
@@ -733,10 +754,26 @@ function renderJoinScreen(){
 }
 
 function renderTopbar(){
-  return el('div', {class:'topbar'},
+  const bar = el('div', {class:'topbar'},
     el('span', null, me.name),
     el('span', {class:'code'}, me.code)
   );
+  const nodes = [bar];
+  // Reset ist nur der Spielleitung erlaubt (sonst könnten mehrere Leute
+  // gleichzeitig gegensätzliche Aktionen auslösen) und nur, solange
+  // überhaupt eine Partie läuft - im Warteraum gibt es nichts zurückzusetzen.
+  if(isHost() && cache.game && cache.game.phase !== 'lobby'){
+    nodes.push(el('button', {
+      class:'danger',
+      style:'width:auto; padding:8px 14px; font-size:12px; margin-bottom:14px;',
+      onclick: ()=>{
+        if(confirm('Spiel wirklich zurücksetzen? Alle Antworten, Stimmen und Punkte gehen verloren - alle kommen zurück in den Warteraum.')){
+          resetGame();
+        }
+      }
+    }, '↺ Spiel zurücksetzen'));
+  }
+  return nodes;
 }
 
 function renderPlayers(){
