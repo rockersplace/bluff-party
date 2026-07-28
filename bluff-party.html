@@ -855,21 +855,22 @@ function renderWriting(){
   return el('div', null, renderTopbar(), card);
 }
 
-// Zeigt dem Spielleiter einen "Weiter"-Button (aktiv, sobald alle fertig sind);
-// allen anderen zeigt es nur einen Hinweis, wer gerade weiterschaltet.
+// Zeigt der Spielleitung einen "Weiter"-Button - der Button ist absichtlich
+// NIE hart gesperrt, auch wenn die Zählung nicht exakt aufgeht (z.B. weil
+// ein alter, inzwischen inaktiver Spieler-Eintrag aus einem früheren Test
+// noch in der Datenbank mitzählt). Sonst könnte die Spielleitung für immer
+// feststecken, wenn eine erwartete Antwort/Stimme nie kommt. Allen anderen
+// zeigt es nur einen Hinweis, wer gerade weiterschaltet.
 function renderAdvanceControl(n, total, onAdvance, label){
   const enough = n >= total;
   if(isHost()){
     return [el('button', {
       class:'primary', style:'margin-top:10px',
-      disabled: enough ? undefined : 'true',
       onclick: onAdvance
-    }, enough ? label : `Warte noch auf ${total-n} Spieler:in(nen) …`)];
+    }, enough ? label : `${label} (${n} von ${total} fertig)`)];
   }
   return [el('div', {class:'hint', style:'margin-top:10px'},
-    enough
-      ? `${hostName()} kann jetzt weitergehen.`
-      : `${hostName()} schaltet weiter, sobald alle fertig sind.`
+    `${hostName()} kann jederzeit weitergehen (${n} von ${total} fertig).`
   )];
 }
 
