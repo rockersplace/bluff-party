@@ -159,6 +159,7 @@
   }
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
+  .confirm{ color:var(--accent); font-size:13px; font-weight:600; margin-top:6px; }
   .question{
     font-weight:600;
     font-size:19px;
@@ -240,6 +241,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
+// ---------- Punktevergabe ----------
+const POINTS_CORRECT_GUESS = 2;   // Punkte fürs Erraten der echten Antwort
+const POINTS_PER_FOOLED = 3;      // Punkte pro Person, die auf die eigene erfundene Antwort hereinfällt
+
 // ---------- Fragenkatalog ----------
 const QUESTIONS = [
   {p:"In einem Dorf in den peruanischen Anden begrüßen sich Fremde traditionell, indem sie ____.", a:"sich gegenseitig kurz die Zunge zeigen"},
@@ -277,6 +282,50 @@ const QUESTIONS = [
   {p:"Das Wort „Robot“ wurde erstmals in einem Theaterstück verwendet und stammt vom tschechischen Wort für ____.", a:"Zwangsarbeit / Frondienst"},
   {p:"In Teilen des antiken Ägyptens wurden Katzen so verehrt, dass ____.", a:"auf ihre Tötung die Todesstrafe stand – selbst für Ausländer"},
   {p:"Der Effekt, dass man beim Gähnen eines anderen automatisch mitgähnt, hängt vermutlich zusammen mit ____.", a:"Empathie und sozialer Bindung zwischen Gruppenmitgliedern"},
+  {p:"Bienen kommunizieren die Lage einer Futterquelle durch ____.", a:"einen speziellen „Schwänzeltanz“, bei dem Richtung und Entfernung codiert werden"},
+  {p:"Der Eiffelturm wird im Sommer durch die Hitzeausdehnung des Metalls bis zu ____ höher als im Winter.", a:"15 Zentimeter"},
+  {p:"Oktopusse können mit ____ schmecken.", a:"ihren Saugnäpfen an den Armen"},
+  {p:"Der kürzeste reguläre Linienflug der Welt verbindet zwei schottische Orkney-Inseln und dauert nur ____.", a:"rund zwei Minuten"},
+  {p:"Auf Island gibt es praktisch keine ____.", a:"Stechmücken"},
+  {p:"In Finnland gibt es mehr ____ als Autos.", a:"Saunen"},
+  {p:"Kleopatra lebte zeitlich näher an ____ als an dem Bau der Großen Pyramide von Gizeh.", a:"der ersten Mondlandung"},
+  {p:"Die Universität Oxford ist älter als ____.", a:"das Aztekenreich"},
+  {p:"Der Erfinder der Mikrowelle entdeckte das Prinzip, weil ____.", a:"ihm in der Nähe eines Radargeräts ein Schokoriegel in der Hosentasche schmolz"},
+  {p:"Luftpolsterfolie („Bubble Wrap“) wurde ursprünglich erfunden als ____.", a:"strukturierte Tapete"},
+  {p:"Das Wort „OK“ stammt vermutlich aus den 1830er-Jahren aus Boston, wo es als scherzhafte Abkürzung für ____ diente.", a:"„oll korrect“, eine absichtlich falsch geschriebene Version von „all correct“"},
+  {p:"Der erste computergesteuerte Bankautomat der Welt (1967, London) funktionierte mit ____.", a:"speziellen Papier-Schecks, die mit radioaktivem Kohlenstoff-14 markiert waren"},
+  {p:"Astronaut:innen werden im Weltraum vorübergehend um mehrere Zentimeter ____.", a:"größer, weil sich die Wirbelsäule ohne Schwerkraft streckt"},
+  {p:"Das Herz einer Garnele befindet sich ____.", a:"in ihrem Kopf"},
+  {p:"Wespen können ____.", a:"einzelne menschliche Gesichter wiedererkennen"},
+  {p:"Es gibt mehr mögliche Zugfolgen in einer Schachpartie als ____.", a:"Atome im beobachtbaren Universum"},
+  {p:"Eine „Jiffy“ ist in der Physik tatsächlich eine anerkannte, sehr kurze Zeiteinheit für ____.", a:"einen extrem kurzen Sekundenbruchteil"},
+  {p:"Erdnüsse zählen botanisch nicht zu den Nüssen, sondern zu den ____.", a:"Hülsenfrüchten"},
+  {p:"Der Punkt über einem kleinen „i“ oder „j“ hat einen eigenen Namen: ____.", a:"„Tüpfelchen“ bzw. im Englischen „tittle“"},
+  {p:"Die Sahara ist ungefähr so groß wie ____.", a:"die gesamte Fläche der USA"},
+  {p:"Menschliche Knochen sind, im Verhältnis zu ihrem Gewicht, etwa so stark wie ____, aber deutlich leichter.", a:"Stahl"},
+  {p:"Ein Tag auf dem Merkur (von Sonnenaufgang zu Sonnenaufgang) dauert länger als ____.", a:"ein ganzes Merkur-Jahr"},
+  {p:"Otter halten sich beim Schlafen im Wasser oft an den Pfoten, damit ____.", a:"sie nicht auseinandertreiben"},
+  {p:"Kühe haben nachweislich ____ und geraten gestresst, wenn sie von ihnen getrennt werden.", a:"beste Freundinnen unter Artgenossinnen"},
+  {p:"Mandeln gehören botanisch zur selben Pflanzenfamilie wie ____.", a:"Pfirsiche"},
+  {p:"Es gibt eine Quallenart, die biologisch potenziell unsterblich ist, weil sie ____.", a:"sich bei Gefahr wieder in ein juveniles Stadium zurückverwandeln kann"},
+  {p:"Der Eiffelturm war ursprünglich nur als temporäres Bauwerk für die Weltausstellung 1889 gedacht und sollte nach ____ wieder abgerissen werden.", a:"etwa 20 Jahren"},
+  {p:"Der heißeste Planet im Sonnensystem ist nicht Merkur, sondern ____, wegen seines extremen Treibhauseffekts.", a:"die Venus"},
+  {p:"Schmetterlinge schmecken mit ____.", a:"ihren Füßen"},
+  {p:"Eine Gruppe von Pandas nennt man im Englischen ein „____“.", a:"embarrassment (etwa: eine „Peinlichkeit“ von Pandas)"},
+  {p:"Der offizielle Sommersport Kanadas ist nicht Eishockey, sondern ____.", a:"Lacrosse"},
+  {p:"Die Antarktis gilt als größte Wüste der Welt, weil ____.", a:"dort im Schnitt extrem wenig Niederschlag fällt"},
+  {p:"Im menschlichen Körper gibt es ungefähr genauso viele oder sogar mehr ____ wie eigene menschliche Zellen.", a:"Bakterienzellen"},
+  {p:"In der Schweiz ist es gesetzlich verboten, ____, weil sie als soziale Tiere gelten.", a:"nur ein einzelnes Meerschweinchen zu halten"},
+  {p:"Das Herz eines Blauwals ist etwa so groß wie ____, und sein Herzschlag ist selbst aus großer Entfernung im Wasser messbar.", a:"ein Kleinwagen"},
+  {p:"Der Mount Everest hieß auf Tibetisch schon lange vor seiner westlichen Benennung ____.", a:"Chomolungma (etwa: „Göttin-Mutter der Welt“)"},
+  {p:"Delfine geben sich gegenseitig individuelle ____, mit denen sie sich untereinander ansprechen.", a:"Pfiff-Signaturen, die wie eigene Namen funktionieren"},
+  {p:"Der Pazifische Ozean ist so groß, dass ____.", a:"alle Kontinente der Erde zusammen hineinpassen würden"},
+  {p:"Der Begriff „Selfie“ wurde erst ____ offiziell in ein englisches Wörterbuch aufgenommen.", a:"2013, als „Wort des Jahres“ des Oxford Dictionary"},
+  {p:"Die tiefste Stelle der Weltmeere, der Marianengraben, ist so tief, dass ____.", a:"der Mount Everest komplett darin versinken würde, mit noch über zwei Kilometern Wasser darüber"},
+  {p:"Der Amazonas-Regenwald produziert schätzungsweise ____ des weltweiten Sauerstoffs – deutlich weniger als der oft zitierte Mythos von 20 %.", a:"etwa 6 bis 9 Prozent"},
+  {p:"Giraffen haben, genau wie Menschen, ____ Halswirbel.", a:"sieben (nur deutlich längere)"},
+  {p:"Der Begriff „Karat“ als Maßeinheit für Edelsteine stammt ursprünglich von ____.", a:"den Samen des Johannisbrotbaums, die früher als Gewichtsreferenz dienten"},
+  {p:"Eine durchschnittliche Wolke wiegt ____, obwohl sie scheinbar mühelos am Himmel schwebt.", a:"mehrere hundert Tonnen"},
 
   // ---- Wahr oder falsch? ----
   {p:"Schokolade wurde ursprünglich vor allem als bitteres Getränk getrunken, nicht als süße Tafel.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
@@ -294,6 +343,26 @@ const QUESTIONS = [
   {p:"Die Farbe Orange wurde nach der Frucht benannt und nicht umgekehrt.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
   {p:"Napoleon war für seine Zeit außergewöhnlich klein gewachsen.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
   {p:"Wale können pfeifen, um sich über hunderte Kilometer hinweg zu verständigen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Große Barriere-Riff ist das größte von Lebewesen erschaffene Bauwerk der Erde.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die meisten Menschen träumen überwiegend in Schwarz-Weiß.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Large Hadron Collider ist die größte von Menschen gebaute Maschine der Welt.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Fingerabdruck jedes Menschen ist einzigartig, sogar bei eineiigen Zwillingen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Blutgruppe 0 ist weltweit die seltenste Blutgruppe.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Alle Bärenarten können schwimmen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Verschluckter Kaugummi bleibt sieben Jahre lang unverdaut im Magen.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Menschen teilen einen erheblichen Teil ihrer Gene mit Bananen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Katzen können den Geschmack „süß“ nicht wahrnehmen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die Concorde flog auf manchen Strecken schneller als die Erddrehung, sodass die Sonne für die Passagiere kurzzeitig im Westen aufging.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Spinnen zählen zoologisch zu den Insekten.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der menschliche Körper besteht zu über 60 % aus Wasser.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Kängurus können sich nicht rückwärts bewegen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die meisten Menschen der Welt sind Rechtshänder.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Eiffelturm ist eines der meistbesuchten kostenpflichtigen Bauwerke der Welt.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Chamäleons wechseln ihre Farbe hauptsächlich zur Tarnung vor Fressfeinden.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Radfahren ist pro zurückgelegtem Meter energieeffizienter als Gehen.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Die Niagarafälle sind die höchsten Wasserfälle der Welt.", a:false, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Der Mond entfernt sich jedes Jahr ein kleines Stück weiter von der Erde.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
+  {p:"Tomaten wurden in Europa jahrhundertelang für giftig gehalten.", a:true, type:"truefalse", cat:"Wahr oder falsch?"},
 
   // ---- Schräge Ereignisse ----
   {p:"1518 brach in Straßburg eine mysteriöse Massenbewegung aus, bei der hunderte Menschen wochenlang wie im Fieber ____.", a:"tanzten, bis manche vor Erschöpfung zusammenbrachen (die „Tanzplage von Straßburg“)", cat:"Schräges Ereignis"},
@@ -309,7 +378,19 @@ const QUESTIONS = [
   {p:"Beim „Great Stork Derby“ im kanadischen Toronto vererbte ein Anwalt sein Vermögen an ____.", a:"die Frau, die in zehn Jahren die meisten Kinder zur Welt brachte", cat:"Schräges Ereignis"},
   {p:"In den 1920er-Jahren gelang es einem Trickbetrüger gleich zweimal, ____.", a:"den Eiffelturm an ahnungslose Schrotthändler zu verkaufen, obwohl er ihm gar nicht gehörte", cat:"Schräges Ereignis"},
   {p:"1869 wurde in New York ein angeblich versteinerter, drei Meter großer „Riese“ ausgegraben, der sich später als ____ herausstellte.", a:"eine plumpe Fälschung aus Gips, vergraben von einem Geschäftsmann, um Schaulustige anzulocken", cat:"Schräges Ereignis"},
-  {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"}
+  {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"},
+  {p:"Beim Marathon der Olympischen Spiele 1904 in St. Louis wurde ein Läufer zwischenzeitlich zum Sieger erklärt, obwohl er ____.", a:"einen Teil der Strecke in einem Auto zurückgelegt hatte, bevor der Betrug aufflog", cat:"Schräges Ereignis"},
+  {p:"1807 organisierte Napoleon eine Kaninchenjagd, die damit endete, dass ____.", a:"hunderte zahme Kaninchen ihn selbst angriffen und in die Flucht schlugen", cat:"Schräges Ereignis"},
+  {p:"Im Jahr 897 ließ Papst Stephan VI. die bereits verstorbene Leiche seines Vorgängers ____.", a:"exhumieren, in Papstgewänder kleiden und vor Gericht stellen (die sogenannte „Leichensynode“)", cat:"Schräges Ereignis"},
+  {p:"Isaac Newton experimentierte einmal für die Wissenschaft damit, ____.", a:"sich selbst eine stumpfe Nadel zwischen Augapfel und Augenhöhle zu schieben, um den Sehsinn zu erforschen", cat:"Schräges Ereignis"},
+  {p:"Der „Eimerkrieg“ zwischen den italienischen Stadtstaaten Bologna und Modena im Jahr 1325 begann, weil ____.", a:"Soldaten aus Modena einen hölzernen Eimer aus einem Brunnen in Bologna gestohlen hatten", cat:"Schräges Ereignis"},
+  {p:"Belgien kam 2010/2011 einem Weltrekord näher, als das Land ____.", a:"541 Tage lang ohne gewählte Regierung auskam", cat:"Schräges Ereignis"},
+  {p:"Der Amerikaner Joshua Norton erklärte sich 1859 selbst zum „Kaiser der Vereinigten Staaten“, und San Francisco ____.", a:"akzeptierte ihn jahrzehntelang als liebenswerte Stadtfigur und druckte sogar eigenes „Kaiser-Geld“", cat:"Schräges Ereignis"},
+  {p:"Historische Stadtaufzeichnungen von Hameln aus dem Jahr 1284 belegen tatsächlich ein reales, bis heute ungeklärtes Ereignis: ____.", a:"das plötzliche, dokumentierte Verschwinden zahlreicher Kinder aus der Stadt", cat:"Schräges Ereignis"},
+  {p:"In den 1960er-Jahren versuchte der US-Geheimdienst CIA im Rahmen eines echten (später eingestellten) Projekts, ____.", a:"eine Katze mit eingebauten Abhörgeräten als lebende Wanze einzusetzen („Operation Acoustic Kitty“)", cat:"Schräges Ereignis"},
+  {p:"Bei der Erstürmung der Bastille 1789, die als Symbol der Französischen Revolution gilt, wurden tatsächlich nur ____ Gefangene befreit.", a:"sieben – eine überraschend kleine, aber gut dokumentierte Zahl", cat:"Schräges Ereignis"},
+  {p:"1971 verzögerte sich bei der Apollo-14-Mission fast das Andockmanöver, bis die Besatzung das Problem mit ____ improvisiert löste.", a:"einem Kugelschreiber, mit dem ein defekter Schalter überbrückt wurde", cat:"Schräges Ereignis"},
+  {p:"Der Trickbetrüger Victor Lustig war in den 1920ern so überzeugend, dass er sogar ____.", a:"den berüchtigten Gangster Al Capone um Geld erleichterte und dabei glaubwürdig blieb", cat:"Schräges Ereignis"}
 ];
 
 // ---------- Firebase Setup ----------
@@ -365,6 +446,22 @@ function loadOrCreateId(){
     localStorage.setItem('bluffpartyspiel_pid', id);
     return id;
   }catch(e){ return uid(); }
+}
+// Merkt sich Name+Raumcode, damit ein Handy, das die Seite neu lädt (z.B.
+// weil der mobile Browser den Tab im Hintergrund verwirft), automatisch
+// wieder in denselben Raum kommt statt zum leeren Anmeldebildschirm
+// zurückgeworfen zu werden.
+function loadStoredRoom(){
+  try{
+    const raw = localStorage.getItem('bluffpartyspiel_room');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveStoredRoom(name, code){
+  try{ localStorage.setItem('bluffpartyspiel_room', JSON.stringify({name, code})); }catch(e){}
+}
+function clearStoredRoom(){
+  try{ localStorage.removeItem('bluffpartyspiel_room'); }catch(e){}
 }
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function makeCode(){
@@ -485,6 +582,7 @@ async function joinRoom(name, code){
     return;
   }
 
+  saveStoredRoom(me.name, me.code);
   joined = true;
   subscribeToRoom();
   render();
@@ -533,11 +631,11 @@ async function resetGame(){
   await updateDoc(roomRef(), { game: initialGame(), scores: {} });
 }
 
-async function submitAnswer(){
-  const text = beautifyText(localAnswerDraft);
-  if(!text || !cache.game) return;
+async function submitAnswer(text){
+  const clean = beautifyText(text);
+  if(!clean || !cache.game) return;
   const round = cache.game.round;
-  await setDoc(doc(submissionsCol(), subDocId(round, me.id)), { round, pid: me.id, name: me.name, text });
+  await setDoc(doc(submissionsCol(), subDocId(round, me.id)), { round, pid: me.id, name: me.name, text: clean });
   localAnswerDraft = "";
   render();
 }
@@ -576,13 +674,13 @@ async function revealResults(){
     roundVotes.forEach(v=>{ votesByPid[v.pid] = v.optionIdx; });
 
     Object.entries(votesByPid).forEach(([pid, idx])=>{
-      if(idx===correctIdx){ newScores[pid] = (newScores[pid]||0) + 1; }
+      if(idx===correctIdx){ newScores[pid] = (newScores[pid]||0) + POINTS_CORRECT_GUESS; }
     });
     game.options.forEach((opt, idx)=>{
       const isRealAuthor = cache.players.some(p=>p.id===opt.authorId);
       if(isRealAuthor && idx!==correctIdx){
         const foolCount = roundVotes.filter(v=>v.optionIdx===idx).length;
-        newScores[opt.authorId] = (newScores[opt.authorId]||0) + foolCount;
+        newScores[opt.authorId] = (newScores[opt.authorId]||0) + foolCount * POINTS_PER_FOOLED;
       }
     });
 
@@ -715,7 +813,7 @@ function renderLobby(){
       el('div', {style:'height:10px'}),
       el('label', null, 'Rundenzahl'),
       roundsInput,
-      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Das Spiel läuft über diese Anzahl Runden, dann gibt es den Endstand.'),
+      el('div', {class:'hint', style:'margin-bottom:12px'}, `Punkte: ${POINTS_CORRECT_GUESS} für die richtige Antwort erraten, ${POINTS_PER_FOOLED} für jede Person, die auf deine erfundene Antwort hereinfällt.`),
       el('button', {class:'primary', disabled: !enough ? 'true' : undefined,
         onclick: ()=>startGame(lobbyRoundsDraft && lobbyRoundsDraft>0 ? lobbyRoundsDraft : 8)
       }, enough ? 'Spiel starten' : `Noch ${2-cache.players.length} Spieler:in(nen) nötig`)
@@ -729,14 +827,19 @@ function renderWriting(){
   const round = game.round;
   const n = countSubmissionsForRound(round);
   const total = cache.players.length;
-  const alreadySubmitted = cache.submissions.some(s=>s.round===round && s.pid===me.id);
+  const mySubmission = cache.submissions.find(s=>s.round===round && s.pid===me.id);
 
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
   const ta = el('textarea', {
     placeholder:'Denk dir eine möglichst überzeugende, aber erfundene Antwort aus …',
     spellcheck:'true', lang:'de', autocapitalize:'sentences', autocorrect:'on'
   });
-  ta.value = localAnswerDraft;
+  // Nach einem Neuladen der Seite (z.B. Handy hat den Tab neu geladen) ist
+  // localAnswerDraft leer, obwohl die Antwort schon abgeschickt wurde -
+  // deshalb hier die bereits gespeicherte Antwort ins Feld vorbefüllen,
+  // statt eine scheinbar leere/verlorene Antwort zu zeigen.
+  const startValue = localAnswerDraft || (mySubmission ? mySubmission.text : "");
+  ta.value = startValue;
   ta.addEventListener('input', e=>{ localAnswerDraft = e.target.value; });
 
   const body = [
@@ -744,7 +847,8 @@ function renderWriting(){
     el('div', {class:'question'}, q.p),
     el('label', null, 'Deine erfundene Antwort'),
     ta,
-    el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; await submitAnswer(); } }, alreadySubmitted ? 'Antwort erneut abschicken' : 'Antwort abschicken'),
+    el('button', {class:'primary', onclick: async ()=>{ await submitAnswer(ta.value); } }, mySubmission ? 'Antwort aktualisieren' : 'Antwort abschicken'),
+    mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null,
     el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.'),
     el('div', {class:'progress'}, `${n} von ${total} Antworten sind da. Es geht automatisch weiter, sobald alle fertig sind.`)
   ];
@@ -850,17 +954,36 @@ function render(){
   }
 }
 
-if(!isConfigured){
-  root.appendChild(el('div', null,
-    renderBrand(),
-    el('div', {class:'card'},
-      el('h2', null, 'Firebase noch nicht konfiguriert'),
-      el('p', {class:'hint'}, 'Trage deine Firebase-Projektdaten oben im <script>-Tag dieser Datei ein (siehe README.md) und lade diese Seite danach neu.')
-    )
-  ));
-} else {
+async function boot(){
+  if(!isConfigured){
+    root.appendChild(el('div', null,
+      renderBrand(),
+      el('div', {class:'card'},
+        el('h2', null, 'Firebase noch nicht konfiguriert'),
+        el('p', {class:'hint'}, 'Trage deine Firebase-Projektdaten oben im <script>-Tag dieser Datei ein (siehe README.md) und lade diese Seite danach neu.')
+      )
+    ));
+    return;
+  }
+
+  const stored = loadStoredRoom();
+  if(stored && stored.name && stored.code){
+    me.name = stored.name;
+    me.code = stored.code;
+    try{
+      await ensureAuth();
+      await setDoc(doc(playersCol(), me.id), { name: me.name, joinedAt: new Date() }, { merge: true });
+      joined = true;
+      subscribeToRoom();
+    }catch(e){
+      clearStoredRoom();
+      errorMsg = "Automatischer Wiedereinstieg fehlgeschlagen, bitte erneut beitreten.";
+    }
+  }
   render();
 }
+
+boot();
 </script>
 </body>
 </html>
