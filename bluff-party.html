@@ -492,9 +492,17 @@ let errorMsg = "";
 let lobbyRoundsDraft = 8;
 let cache = { players: [], game: null, scores: {}, submissions: [], votes: [], hostId: null };
 
-function isHost(){ return !!cache.hostId && cache.hostId === me.id; }
+// Fallback für Räume, die vor Einführung der Spielleitung erstellt wurden
+// (das gespeicherte Firestore-Dokument hat dann kein hostId-Feld) - sonst
+// würde niemand jemals als Spielleitung erkannt und alle blieben für immer
+// auf "warte auf die Spielleitung" hängen. In dem Fall gilt die Person, die
+// zuerst beigetreten ist (players[0], nach joinedAt sortiert), als Ersatz.
+function isHost(){
+  if(cache.hostId) return cache.hostId === me.id;
+  return cache.players.length > 0 && cache.players[0].id === me.id;
+}
 function hostName(){
-  const h = cache.players.find(p=>p.id===cache.hostId);
+  const h = cache.hostId ? cache.players.find(p=>p.id===cache.hostId) : cache.players[0];
   return h ? h.name : 'Spielleiter:in';
 }
 
