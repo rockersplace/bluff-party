@@ -312,13 +312,13 @@ async function sGet(key, shared){
   try{
     const snap = await db.collection('kv').doc(key).get();
     return snap.exists ? snap.data().value : null;
-  } catch(e){ return null; }
+  } catch(e){ console.error('sGet-Fehler:', e); return null; }
 }
 async function sSet(key, value, shared){
   try{
     await db.collection('kv').doc(key).set({ value: value, updatedAt: Date.now() });
     return true;
-  } catch(e){ return null; }
+  } catch(e){ console.error('sSet-Fehler:', e); return null; }
 }
 async function sList(prefix, shared){
   try{
@@ -327,7 +327,7 @@ async function sList(prefix, shared){
       .where(firebase.firestore.FieldPath.documentId(), '<', prefix + '\uf8ff')
       .get();
     return snap.docs.map(d => d.id);
-  } catch(e){ return []; }
+  } catch(e){ console.error('sList-Fehler:', e); return []; }
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
