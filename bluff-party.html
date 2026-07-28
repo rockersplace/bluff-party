@@ -237,7 +237,7 @@ const firebaseConfig = {
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
-  getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, runTransaction
+  getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
@@ -489,9 +489,13 @@ let unsubscribers = [];
 let localAnswerDraft = "";
 let errorMsg = "";
 let lobbyRoundsDraft = 8;
-let connTestResult = "";
-let autoAdvanceKey = null;
-let cache = { players: [], game: null, scores: {}, submissions: [], votes: [] };
+let cache = { players: [], game: null, scores: {}, submissions: [], votes: [], hostId: null };
+
+function isHost(){ return !!cache.hostId && cache.hostId === me.id; }
+function hostName(){
+  const h = cache.players.find(p=>p.id===cache.hostId);
+  return h ? h.name : 'Spielleiter:in';
+}
 
 function unsubscribeAll(){
   unsubscribers.forEach(u=>u());
@@ -504,6 +508,7 @@ function subscribeToRoom(){
     const data = snap.data();
     cache.game = data ? data.game : null;
     cache.scores = data ? (data.scores || {}) : {};
+    cache.hostId = data ? (data.hostId || null) : null;
     render();
   }, err=>{ errorMsg = "Verbindung verloren: " + err.message; render(); }));
 
@@ -536,29 +541,6 @@ function countVotesForRound(round){
   return cache.votes.filter(v=>v.round===round).length;
 }
 
-// Prüft nach jedem Datenupdate, ob alle fertig sind, und schaltet dann
-// automatisch weiter (Schreiben -> Abstimmen -> Auflösung). So kann in jeder
-// Runde wirklich jede:r mitspielen, ohne auf eine feste "Vorleser:in"-Person
-// zu warten, die selbst aussetzen müsste.
-function maybeAutoAdvance(){
-  if(!cache.game || !joined) return;
-  const game = cache.game;
-  const total = cache.players.length;
-  if(total < 2) return;
-
-  if(game.phase === 'writing'){
-    if(countSubmissionsForRound(game.round) >= total){
-      const key = `voting-${game.round}`;
-      if(autoAdvanceKey !== key){ autoAdvanceKey = key; goToVoting(); }
-    }
-  } else if(game.phase === 'voting'){
-    if(countVotesForRound(game.round) >= total){
-      const key = `reveal-${game.round}`;
-      if(autoAdvanceKey !== key){ autoAdvanceKey = key; revealResults(); }
-    }
-  }
-}
-
 // ---------- Actions ----------
 async function joinRoom(name, code){
   errorMsg = "";
@@ -572,7 +554,7 @@ async function joinRoom(name, code){
     await runTransaction(db, async (tx)=>{
       const snap = await tx.get(roomRef());
       if(!snap.exists()){
-        tx.set(roomRef(), { game: initialGame(), scores: {} });
+        tx.set(roomRef(), { game: initialGame(), scores: {}, hostId: me.id });
       }
     });
     await setDoc(doc(playersCol(), me.id), { name: me.name, joinedAt: new Date() });
@@ -700,32 +682,6 @@ async function nextRound(){
   });
 }
 
-async function testConnection(){
-  connTestResult = "Teste Firebase-Verbindung …";
-  render();
-  if(!isConfigured){
-    connTestResult = "Die firebase-config oben im <script>-Tag enthält noch Platzhalterwerte. Bitte zuerst ausfüllen (siehe README.md).";
-    render();
-    return;
-  }
-  const steps = [];
-  try{
-    const user = await ensureAuth();
-    steps.push("Anmeldung (anonym): ok ✓");
-    const testRef = doc(db, "connTest", user.uid);
-    const testValue = "test-" + Date.now();
-    await setDoc(testRef, { value: testValue, at: new Date() });
-    steps.push("Schreiben: ok ✓");
-    const snap = await getDoc(testRef);
-    const readBack = snap.exists() ? snap.data().value : null;
-    steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
-  }catch(e){
-    steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
-  }
-  connTestResult = steps.join(' · ');
-  render();
-}
-
 // ---------- Render ----------
 function el(tag, props, ...children){
   const e = document.createElement(tag);
@@ -756,7 +712,6 @@ function renderJoinScreen(){
 
   const joinBtn = el('button', {class:'primary', onclick: ()=>joinRoom(nameInput.value, codeInput.value)}, 'Raum beitreten');
   const createBtn = el('button', {class:'secondary', onclick: ()=>{ const c = makeCode(); codeInput.value = c; me.code = c; }}, 'Neuen Raumcode erzeugen');
-  const testBtn = el('button', {class:'secondary', onclick: testConnection}, 'Verbindung testen (Diagnose)');
 
   return el('div', null,
     renderBrand(),
@@ -769,9 +724,6 @@ function renderJoinScreen(){
       el('div', {class:'row'}, joinBtn),
       el('div', {style:'height:8px'}),
       el('div', {class:'row'}, createBtn),
-      el('div', {style:'height:8px'}),
-      el('div', {class:'row'}, testBtn),
-      connTestResult ? el('div', {class:'hint', style:'margin-top:10px'}, connTestResult) : null,
       el('div', {class:'hint'}, 'Eine Person erzeugt einen Raumcode und sagt ihn den anderen. Alle öffnen diese Seite auf ihrem Handy, geben Namen + denselben Code ein und tippen „Raum beitreten“.')
     ),
     el('div', {class:'install-hint'},
@@ -791,7 +743,7 @@ function renderPlayers(){
   return el('div', {class:'players'},
     cache.players.map(p=>el('div', {class:'chip'},
       el('div', {class:'avatar'}, initials(p.name)),
-      el('span', null, p.name + (p.id===me.id ? ' (du)' : ''))
+      el('span', null, p.name + (p.id===me.id ? ' (du)' : '') + (p.id===cache.hostId ? ' 👑' : ''))
     ))
   );
 }
@@ -850,11 +802,30 @@ function renderWriting(){
     el('button', {class:'primary', onclick: async ()=>{ await submitAnswer(ta.value); } }, mySubmission ? 'Antwort aktualisieren' : 'Antwort abschicken'),
     mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null,
     el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.'),
-    el('div', {class:'progress'}, `${n} von ${total} Antworten sind da. Es geht automatisch weiter, sobald alle fertig sind.`)
+    el('div', {class:'progress'}, `${n} von ${total} Antworten sind da.`),
+    ...renderAdvanceControl(n, total, goToVoting, 'Weiter zur Abstimmung')
   ];
 
   const card = el('div', {class:'card'}, ...body);
   return el('div', null, renderTopbar(), card);
+}
+
+// Zeigt dem Spielleiter einen "Weiter"-Button (aktiv, sobald alle fertig sind);
+// allen anderen zeigt es nur einen Hinweis, wer gerade weiterschaltet.
+function renderAdvanceControl(n, total, onAdvance, label){
+  const enough = n >= total;
+  if(isHost()){
+    return [el('button', {
+      class:'primary', style:'margin-top:10px',
+      disabled: enough ? undefined : 'true',
+      onclick: onAdvance
+    }, enough ? label : `Warte noch auf ${total-n} Spieler:in(nen) …`)];
+  }
+  return [el('div', {class:'hint', style:'margin-top:10px'},
+    enough
+      ? `${hostName()} kann jetzt weitergehen.`
+      : `${hostName()} schaltet weiter, sobald alle fertig sind.`
+  )];
 }
 
 function renderVoting(){
@@ -884,8 +855,9 @@ function renderVoting(){
     el('div', {class:'question'}, q.p),
     ...optionEls,
     el('div', {class:'progress'}, myVote
-      ? `${n} von ${total} Stimmen abgegeben. Es geht automatisch weiter, sobald alle abgestimmt haben.`
-      : 'Tippe auf die Antwort, die du für die echte hältst.')
+      ? `${n} von ${total} Stimmen abgegeben.`
+      : 'Tippe auf die Antwort, die du für die echte hältst.'),
+    ...(myVote ? renderAdvanceControl(n, total, revealResults, 'Auflösung zeigen') : [])
   ];
 
   const card = el('div', {class:'card'}, ...body);
@@ -937,7 +909,6 @@ function renderReveal(){
 }
 
 function render(){
-  maybeAutoAdvance();
   root.innerHTML = "";
   if(!joined){
     root.appendChild(renderJoinScreen());
