@@ -10,8 +10,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --ink:#161A33;
@@ -220,18 +218,6 @@
 <div id="root" class="wrap"></div>
 
 <script>
-// ---------- Firebase (geteilter Spielzustand über alle Handys hinweg) ----------
-const firebaseConfig = {
-  apiKey: "AIzaSyDBw9t9akBQe_hbkYaAhiogEc6OmOyLs2s",
-  authDomain: "bluff-party-a9080.firebaseapp.com",
-  projectId: "bluff-party-a9080",
-  storageBucket: "bluff-party-a9080.firebasestorage.app",
-  messagingSenderId: "808631167479",
-  appId: "1:808631167479:web:3af08848a1e41aaf36a6f2"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
 // ---------- Fragenkatalog (original, keine Übernahme fremder Kartentexte) ----------
 const QUESTIONS = [
   {p:"In einem Dorf in den peruanischen Anden begrüßen sich Fremde traditionell, indem sie ____.", a:"sich gegenseitig kurz die Zunge zeigen"},
@@ -304,30 +290,19 @@ const QUESTIONS = [
   {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"}
 ];
 
-// ---------- Storage helpers (Firebase Firestore als geteilter Speicher) ----------
-// Jeder "key" wird als Dokument-ID in der Sammlung "kv" abgelegt.
-// Der Parameter "shared" bleibt aus Kompatibilität zum bisherigen Code stehen,
-// wird hier aber nicht mehr gebraucht: Firestore ist ohnehin für alle geteilt.
+// ---------- Storage helpers (Claudes offizielle Artefakt-Speicherfunktion) ----------
+// Funktioniert nur, wenn dieses Artefakt veröffentlicht ("Publish") wurde.
 async function sGet(key, shared){
-  try{
-    const snap = await db.collection('kv').doc(key).get();
-    return snap.exists ? snap.data().value : null;
-  } catch(e){ console.error('sGet-Fehler:', e); return null; }
+  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
+  catch(e){ return null; }
 }
 async function sSet(key, value, shared){
-  try{
-    await db.collection('kv').doc(key).set({ value: value, updatedAt: Date.now() });
-    return true;
-  } catch(e){ console.error('sSet-Fehler:', e); return null; }
+  try{ return await window.storage.set(key, value, !!shared); }
+  catch(e){ return null; }
 }
 async function sList(prefix, shared){
-  try{
-    const snap = await db.collection('kv')
-      .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
-      .where(firebase.firestore.FieldPath.documentId(), '<', prefix + '\uf8ff')
-      .get();
-    return snap.docs.map(d => d.id);
-  } catch(e){ console.error('sList-Fehler:', e); return []; }
+  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
+  catch(e){ return []; }
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -354,6 +329,8 @@ let me = { id: uid(), name: "", code: "" };
 let joined = false;
 let pollTimer = null;
 let localSelectedOption = null; // during voting, before vote is saved
+let myLastSubmittedRound = -1; // welche Runde ich meine Antwort schon abgeschickt habe
+let myLastVotedRound = -1; // welche Runde ich schon abgestimmt habe
 let localAnswerDraft = "";
 let errorMsg = "";
 let lobbyRoundsDraft = 8;
@@ -376,6 +353,15 @@ async function refresh(){
   cache.game = gameRaw ? JSON.parse(gameRaw) : null;
   cache.scores = scoresRaw ? JSON.parse(scoresRaw) : {};
   render();
+  // Automatischer Fortschritt: niemand ist mehr "Vorleser:in", daher prüft
+  // jedes Gerät im Hintergrund, ob alle Antworten/Stimmen da sind, und einer
+  // von ihnen schaltet die Runde weiter (idempotent genug für eine kleine
+  // Gruppe – im seltenen Fall eines Gleichstands passiert das nur doppelt).
+  if(cache.game && cache.game.phase === "writing"){
+    maybeAdvanceToVoting();
+  } else if(cache.game && cache.game.phase === "voting"){
+    maybeAdvanceToReveal();
+  }
 }
 
 function startPolling(){
@@ -415,7 +401,7 @@ async function joinRoom(name, code, isNew){
 
   let gameRaw = await sGet(gameKey(), true);
   if(!gameRaw){
-    const game = { phase:"lobby", round:0, readerId:null, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
+    const game = { phase:"lobby", round:0, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
     await sSet(gameKey(), JSON.stringify(game), true);
   }
   let scoresRaw = await sGet(scoresKey(), true);
@@ -434,8 +420,10 @@ function pickQuestionIndex(used){
 }
 
 // Baut den Rundenzustand passend zum Fragetyp: normale Fragen starten bei
-// "writing" (Antworten erfinden), Wahr/Falsch-Fragen springen direkt zur
-// Abstimmung, weil dort nichts erfunden werden muss.
+// "writing" (alle erfinden eine Antwort), Wahr/Falsch-Fragen springen direkt
+// zur Abstimmung, weil es dort nichts zu erfinden gibt. Es gibt keine
+// Vorleser:in mehr – die App selbst kennt die richtige Antwort, damit jede
+// Person in jeder Runde mitschreiben und mitraten kann.
 function buildRoundPatch(qIndex){
   const q = QUESTIONS[qIndex];
   if(q.type === "truefalse"){
@@ -470,7 +458,7 @@ async function startGame(rounds){
   const qIndex = pickQuestionIndex([]);
   const patch = buildRoundPatch(qIndex);
   const game = {
-    round:1, readerId: players[0].id, usedQuestions:[qIndex],
+    round:1, usedQuestions:[qIndex],
     totalRounds, tally:null, votes:null, correctIdx:null, ...patch
   };
   await sSet(gameKey(), JSON.stringify(game), true);
@@ -478,7 +466,7 @@ async function startGame(rounds){
 }
 
 async function resetGame(){
-  const game = { phase:"lobby", round:0, readerId:null, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
+  const game = { phase:"lobby", round:0, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
   await sSet(gameKey(), JSON.stringify(game), true);
   await sSet(scoresKey(), JSON.stringify({}), true);
   await refresh();
@@ -497,14 +485,21 @@ async function countSubmissions(){
   return keys.length;
 }
 
-async function goToVoting(){
+// Alle Spieler:innen schreiben eine Antwort (es gibt keine Vorleser:in mehr,
+// die ausgenommen wäre). Sobald alle abgeschickt haben, baut die App die
+// Auswahl (richtige Antwort + alle erfundenen) und schaltet automatisch zur
+// Abstimmung weiter.
+async function maybeAdvanceToVoting(){
   const game = cache.game;
+  if(!game || game.phase !== "writing") return;
   const keys = await sList(subPrefix(game.round), true);
+  if(keys.length < cache.players.length) return;
   const subs = [];
   for(const k of keys){
     const raw = await sGet(k, true);
     if(raw){ const v = JSON.parse(raw); subs.push({ authorId: k.split(":").pop(), text: v.text }); }
   }
+  if(subs.length < cache.players.length) return; // ein Wert konnte gerade nicht gelesen werden – später erneut versuchen
   const q = QUESTIONS[game.questionIndex];
   const options = shuffle([
     { authorId: "__CORRECT__", text: q.a },
@@ -526,9 +521,13 @@ async function countVotes(){
   return keys.length;
 }
 
-async function revealResults(){
+// Sobald alle Spieler:innen abgestimmt haben, wertet die App automatisch aus.
+async function maybeAdvanceToReveal(){
   const game = cache.game;
+  if(!game || game.phase !== "voting") return;
   const keys = await sList(votePrefix(game.round), true);
+  if(keys.length < cache.players.length) return;
+
   const votes = {};
   for(const k of keys){
     const pid = k.split(":").pop();
@@ -565,13 +564,10 @@ async function revealResults(){
 
 async function nextRound(){
   const game = cache.game;
-  const players = cache.players;
-  const curIdx = players.findIndex(p=>p.id===game.readerId);
-  const nextReader = players[(curIdx+1) % players.length].id;
   const qIndex = pickQuestionIndex(game.usedQuestions);
   const patch = buildRoundPatch(qIndex);
   const updated = {
-    ...game, round: game.round+1, readerId: nextReader,
+    ...game, round: game.round+1,
     usedQuestions:[...game.usedQuestions, qIndex],
     tally:null, votes:null, correctIdx:null, ...patch
   };
@@ -596,14 +592,20 @@ function el(tag, props, ...children){
 
 let connTestResult = "";
 async function testConnection(){
-  connTestResult = "Teste Firebase-Verbindung …";
+  connTestResult = "Teste Speicherfunktion …";
   render();
+  if(typeof window.storage === 'undefined'){
+    connTestResult = "window.storage ist nicht verfügbar. Das Artefakt muss veröffentlicht sein, damit die Speicherfunktion überhaupt existiert.";
+    render();
+    return;
+  }
   const steps = [];
   try{
     const testValue = "test-" + Date.now();
-    const setResult = await sSet('verbindungstest', testValue, true);
+    const setResult = await window.storage.set('__verbindungstest__', testValue, true);
     steps.push(`Schreiben: ${setResult ? 'ok ✓' : 'fehlgeschlagen ✗'}`);
-    const readBack = await sGet('verbindungstest', true);
+    const getResult = await window.storage.get('__verbindungstest__', true);
+    const readBack = getResult ? getResult.value : null;
     steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
   }catch(e){
     steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
@@ -680,7 +682,7 @@ function renderLobby(){
       el('div', {style:'height:10px'}),
       el('label', null, 'Rundenzahl'),
       roundsInput,
-      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Jede Person kommt so oft als Vorleser:in dran, bis diese Rundenzahl erreicht ist.'),
+      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Bei jeder Frage schreibt und rät jede Person mit – die App kennt die richtige Antwort. Nach dieser Rundenzahl endet das Spiel.'),
       el('button', {class:'primary', disabled: !enough ? 'true' : undefined,
         onclick: ()=>startGame(lobbyRoundsDraft && lobbyRoundsDraft>0 ? lobbyRoundsDraft : 8)
       }, enough ? 'Spiel starten' : `Noch ${2-cache.players.length} Spieler:in(nen) nötig`)
@@ -691,20 +693,17 @@ function renderLobby(){
 function renderWriting(){
   const game = cache.game;
   const q = QUESTIONS[game.questionIndex];
-  const iAmReader = game.readerId === me.id;
-  const readerName = (cache.players.find(p=>p.id===game.readerId)||{}).name || '?';
-
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
+  const alreadySubmitted = myLastSubmittedRound === game.round;
+
   const body = [
-    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName}`),
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
     el('div', {class:'question'}, q.p)
   ];
 
-  if(iAmReader){
+  if(alreadySubmitted){
     body.push(
-      el('div', {class:'answer-reveal'}, el('b', null, 'Echte Antwort (nur du siehst das): '), q.a),
-      el('div', {class:'progress', id:'sub-progress'}, 'Warte auf Antworten der anderen …'),
-      el('button', {class:'primary', style:'margin-top:14px', onclick: goToVoting}, 'Zur Abstimmung wechseln')
+      el('div', {class:'progress', id:'sub-progress'}, 'Antwort abgeschickt – warte auf die anderen …')
     );
   } else {
     const ta = el('textarea', {
@@ -716,7 +715,7 @@ function renderWriting(){
     body.push(
       el('label', null, 'Deine erfundene Antwort'),
       ta,
-      el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; await submitAnswer(); } }, 'Antwort abschicken'),
+      el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; myLastSubmittedRound = game.round; await submitAnswer(); } }, 'Antwort abschicken'),
       el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.')
     );
   }
@@ -726,12 +725,8 @@ function renderWriting(){
 
   // Fortschritt asynchron nachladen (nicht blockierend)
   countSubmissions().then(n=>{
-    const nonReaderCount = cache.players.length - 1;
     const progEl = card.querySelector('#sub-progress');
-    if(progEl) progEl.textContent = `${n} von ${nonReaderCount} Antworten sind da.`;
-    if(!iAmReader){
-      const already = cache.players.length; // no-op guard
-    }
+    if(progEl) progEl.textContent = `Antwort abgeschickt – ${n} von ${cache.players.length} sind da.`;
   });
 
   return wrap;
@@ -739,34 +734,31 @@ function renderWriting(){
 
 function renderVoting(){
   const game = cache.game;
-  const iAmReader = game.readerId === me.id;
-  const readerName = (cache.players.find(p=>p.id===game.readerId)||{}).name || '?';
   const q = QUESTIONS[game.questionIndex];
+  const alreadyVoted = localSelectedOption !== null && myLastVotedRound === game.round;
 
   const optionEls = game.options.map((opt, idx)=>{
     const isMine = opt.authorId === me.id;
-    const card = el('div', {class:'option-card' + (localSelectedOption===idx?' selected':'')},
+    const isSelected = alreadyVoted && localSelectedOption === idx;
+    const card = el('div', {class:'option-card' + (isSelected?' selected':'')},
       el('div', {class:'option-text'}, opt.text),
       isMine ? el('div', {class:'option-meta'}, 'Das ist deine eigene Antwort') : null
     );
-    if(!iAmReader && !isMine){
-      card.addEventListener('click', ()=>castVote(idx));
+    if(!isMine && !alreadyVoted){
+      card.addEventListener('click', ()=>{ myLastVotedRound = game.round; castVote(idx); });
     }
     return card;
   });
 
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
   const body = [
-    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName}`),
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
     el('div', {class:'question'}, q.p),
     ...optionEls
   ];
 
-  if(iAmReader){
-    body.push(
-      el('div', {class:'progress', id:'vote-progress'}, 'Warte auf die Stimmen …'),
-      el('button', {class:'primary', style:'margin-top:10px', onclick: revealResults}, 'Ergebnis zeigen')
-    );
+  if(alreadyVoted){
+    body.push(el('div', {class:'progress', id:'vote-progress'}, 'Stimme abgegeben – warte auf die anderen …'));
   } else {
     body.push(el('div', {class:'hint'}, 'Tippe auf die Antwort, die du für die echte hältst.'));
   }
@@ -775,9 +767,8 @@ function renderVoting(){
   const wrap = el('div', null, renderTopbar(), card);
 
   countVotes().then(n=>{
-    const votersExpected = cache.players.length - 1;
     const progEl = card.querySelector('#vote-progress');
-    if(progEl) progEl.textContent = `${n} von ${votersExpected} Stimmen abgegeben.`;
+    if(progEl) progEl.textContent = `Stimme abgegeben – ${n} von ${cache.players.length} sind da.`;
   });
 
   return wrap;
@@ -785,7 +776,6 @@ function renderVoting(){
 
 function renderReveal(){
   const game = cache.game;
-  const iAmReader = game.readerId === me.id;
 
   const optionEls = game.options.map((opt, idx)=>{
     const isCorrect = idx === game.correctIdx;
@@ -820,15 +810,9 @@ function renderReveal(){
 
   if(isFinalRound){
     body.unshift(el('div', {class:'muted'}, `Letzte Runde (${game.round} von ${game.totalRounds}) gespielt 🎉`));
-    if(iAmReader){
-      body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
-    } else {
-      body.push(el('div', {class:'hint', style:'margin-top:10px'}, `Warte, bis ${(cache.players.find(p=>p.id===game.readerId)||{}).name} ein neues Spiel startet.`));
-    }
-  } else if(iAmReader){
-    body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: nextRound}, 'Nächste Runde'));
+    body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
   } else {
-    body.push(el('div', {class:'hint', style:'margin-top:10px'}, `Warte, bis ${(cache.players.find(p=>p.id===game.readerId)||{}).name} die nächste Runde startet.`));
+    body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: nextRound}, 'Nächste Runde'));
   }
 
   return el('div', null, renderTopbar(), el('div', {class:'card'}, ...body));
@@ -851,7 +835,20 @@ function render(){
   }
 }
 
-render();
+if(typeof window.storage === 'undefined'){
+  root.appendChild(el('div', null,
+    el('div', {class:'brand'},
+      el('span', {class:'mark'}, 'Schwindelrunde'),
+      el('span', {class:'sub'}, 'Bluff-Partyspiel')
+    ),
+    el('div', {class:'card'},
+      el('h2', null, 'Bitte zuerst veröffentlichen'),
+      el('p', {class:'hint'}, 'Diese Speicherfunktion ist Teil von Claudes Artefakten, funktioniert laut Anthropics Hilfe-Center aber erst, nachdem das Artefakt veröffentlicht wurde. Bitte oben im Artefakt-Fenster (z. B. über den kleinen Pfeil neben „Kopieren“) nach „Publish“ bzw. „Veröffentlichen“ suchen und das Artefakt veröffentlichen. Danach diese Seite über den neuen, veröffentlichten Link erneut öffnen.')
+    )
+  ));
+} else {
+  render();
+}
 </script>
 </body>
 </html>
