@@ -10,6 +10,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
   :root{
     --ink:#161A33;
@@ -218,6 +220,18 @@
 <div id="root" class="wrap"></div>
 
 <script>
+// ---------- Firebase (geteilter Spielzustand über alle Handys hinweg) ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyDBw9t9akBQe_hbkYaAhiogEc6OmOyLs2s",
+  authDomain: "bluff-party-a9080.firebaseapp.com",
+  projectId: "bluff-party-a9080",
+  storageBucket: "bluff-party-a9080.firebasestorage.app",
+  messagingSenderId: "808631167479",
+  appId: "1:808631167479:web:3af08848a1e41aaf36a6f2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 // ---------- Fragenkatalog (original, keine Übernahme fremder Kartentexte) ----------
 const QUESTIONS = [
   {p:"In einem Dorf in den peruanischen Anden begrüßen sich Fremde traditionell, indem sie ____.", a:"sich gegenseitig kurz die Zunge zeigen"},
@@ -290,19 +304,30 @@ const QUESTIONS = [
   {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"}
 ];
 
-// ---------- Storage helpers (Claudes offizielle Artefakt-Speicherfunktion) ----------
-// Funktioniert nur, wenn dieses Artefakt veröffentlicht ("Publish") wurde.
+// ---------- Storage helpers (Firebase Firestore als geteilter Speicher) ----------
+// Jeder "key" wird als Dokument-ID in der Sammlung "kv" abgelegt.
+// Der Parameter "shared" bleibt aus Kompatibilität zum bisherigen Code stehen,
+// wird hier aber nicht mehr gebraucht: Firestore ist ohnehin für alle geteilt.
 async function sGet(key, shared){
-  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
-  catch(e){ return null; }
+  try{
+    const snap = await db.collection('kv').doc(key).get();
+    return snap.exists ? snap.data().value : null;
+  } catch(e){ return null; }
 }
 async function sSet(key, value, shared){
-  try{ return await window.storage.set(key, value, !!shared); }
-  catch(e){ return null; }
+  try{
+    await db.collection('kv').doc(key).set({ value: value, updatedAt: Date.now() });
+    return true;
+  } catch(e){ return null; }
 }
 async function sList(prefix, shared){
-  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
-  catch(e){ return []; }
+  try{
+    const snap = await db.collection('kv')
+      .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
+      .where(firebase.firestore.FieldPath.documentId(), '<', prefix + '\uf8ff')
+      .get();
+    return snap.docs.map(d => d.id);
+  } catch(e){ return []; }
 }
 
 function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -571,20 +596,14 @@ function el(tag, props, ...children){
 
 let connTestResult = "";
 async function testConnection(){
-  connTestResult = "Teste Speicherfunktion …";
+  connTestResult = "Teste Firebase-Verbindung …";
   render();
-  if(typeof window.storage === 'undefined'){
-    connTestResult = "window.storage ist nicht verfügbar. Das Artefakt muss veröffentlicht sein, damit die Speicherfunktion überhaupt existiert.";
-    render();
-    return;
-  }
   const steps = [];
   try{
     const testValue = "test-" + Date.now();
-    const setResult = await window.storage.set('__verbindungstest__', testValue, true);
+    const setResult = await sSet('__verbindungstest__', testValue, true);
     steps.push(`Schreiben: ${setResult ? 'ok ✓' : 'fehlgeschlagen ✗'}`);
-    const getResult = await window.storage.get('__verbindungstest__', true);
-    const readBack = getResult ? getResult.value : null;
+    const readBack = await sGet('__verbindungstest__', true);
     steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
   }catch(e){
     steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
@@ -832,20 +851,7 @@ function render(){
   }
 }
 
-if(typeof window.storage === 'undefined'){
-  root.appendChild(el('div', null,
-    el('div', {class:'brand'},
-      el('span', {class:'mark'}, 'Schwindelrunde'),
-      el('span', {class:'sub'}, 'Bluff-Partyspiel')
-    ),
-    el('div', {class:'card'},
-      el('h2', null, 'Bitte zuerst veröffentlichen'),
-      el('p', {class:'hint'}, 'Diese Speicherfunktion ist Teil von Claudes Artefakten, funktioniert laut Anthropics Hilfe-Center aber erst, nachdem das Artefakt veröffentlicht wurde. Bitte oben im Artefakt-Fenster (z. B. über den kleinen Pfeil neben „Kopieren“) nach „Publish“ bzw. „Veröffentlichen“ suchen und das Artefakt veröffentlichen. Danach diese Seite über den neuen, veröffentlichten Link erneut öffnen.')
-    )
-  ));
-} else {
-  render();
-}
+render();
 </script>
 </body>
 </html>
