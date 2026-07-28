@@ -4,40 +4,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Schwindelrunde</title>
+<title>Bluff-Partyspiel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,900;1,9..144,600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#161A33;
-    --ink-2:#1F2547;
-    --ink-3:#2A3163;
-    --gold:#E8B94A;
-    --coral:#E4572E;
-    --cream:#F5EFE4;
-    --muted:#9AA0C3;
-    --radius:14px;
+    --bg-1:#eef1f8;
+    --bg-2:#e2e8f7;
+    --heading:#4b5568;
+    --accent:#f4801f;
+    --accent-ink:#ffffff;
+    --panel:#eef1fb;
+    --card:#ffffff;
+    --text:#26314c;
+    --muted:#8892ab;
+    --border:#e3e7f3;
+    --border-strong:#d7dcee;
+    --danger:#e05a3a;
+    --danger-bg:#fdeee9;
+    --correct-bg:#fff3e7;
+    --radius:22px;
+    --radius-sm:14px;
+    --pill:999px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;height:100%;}
   body{
-    background:
-      radial-gradient(circle at 15% 0%, #232a52 0%, transparent 45%),
-      radial-gradient(circle at 100% 100%, #1c2148 0%, transparent 50%),
-      var(--ink);
-    color:var(--cream);
-    font-family:'IBM Plex Mono', monospace;
+    background:linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 60%, var(--bg-1) 100%);
+    color:var(--text);
+    font-family:'Poppins', sans-serif;
     min-height:100vh;
     display:flex;
     flex-direction:column;
     -webkit-font-smoothing:antialiased;
   }
   h1,h2,h3,.display{
-    font-family:'Fraunces', serif;
-    font-weight:900;
+    font-family:'Poppins', sans-serif;
+    font-weight:800;
     letter-spacing:-0.01em;
     margin:0;
   }
@@ -48,34 +54,41 @@
     max-width:520px;
     margin:0 auto;
     width:100%;
-    padding:20px 18px 40px;
+    padding:28px 18px 40px;
   }
   .brand{
-    display:flex;
-    align-items:baseline;
-    gap:10px;
+    text-align:center;
     margin-bottom:22px;
   }
   .brand .mark{
-    font-family:'Fraunces', serif;
-    font-weight:900;
-    font-style:italic;
-    font-size:26px;
-    color:var(--gold);
+    font-size:30px;
+    font-weight:800;
+    color:var(--heading);
+    line-height:1.15;
   }
+  .brand .mark .accent{ color:var(--accent); }
   .brand .sub{
-    font-size:11px;
+    font-size:12px;
     color:var(--muted);
     text-transform:uppercase;
-    letter-spacing:.12em;
+    letter-spacing:.14em;
+    margin-top:4px;
   }
   .card{
-    background:var(--ink-2);
-    border:1px solid #333a6b;
+    background:var(--card);
+    border:1px solid var(--border);
     border-radius:var(--radius);
-    padding:20px;
+    padding:22px;
+    margin-bottom:14px;
+    box-shadow:0 12px 30px rgba(40,50,90,0.06);
+  }
+  .panel{
+    background:var(--panel);
+    border-radius:var(--radius);
+    padding:6px;
     margin-bottom:14px;
   }
+  .panel .card{ margin-bottom:0; box-shadow:none; }
   label{
     display:block;
     font-size:11px;
@@ -83,121 +96,113 @@
     letter-spacing:.1em;
     color:var(--muted);
     margin-bottom:6px;
+    font-weight:600;
   }
-  input[type=text], textarea{
+  input[type=text]{
     width:100%;
-    background:var(--ink);
-    border:1px solid #3a4178;
-    border-radius:10px;
-    color:var(--cream);
-    font-family:'IBM Plex Mono', monospace;
+    background:#f6f7fc;
+    border:1px solid var(--border-strong);
+    border-radius:var(--pill);
+    color:var(--text);
+    font-family:'Poppins', sans-serif;
     font-size:16px;
-    padding:12px 14px;
+    padding:14px 20px;
     margin-bottom:14px;
     outline:none;
   }
-  input[type=text]:focus, textarea:focus{ border-color:var(--gold); }
-  textarea{ resize:vertical; min-height:80px; line-height:1.4; }
+  textarea{
+    width:100%;
+    background:#f6f7fc;
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm);
+    color:var(--text);
+    font-family:'Poppins', sans-serif;
+    font-size:16px;
+    padding:14px 16px;
+    margin-bottom:14px;
+    outline:none;
+    resize:vertical;
+    min-height:80px;
+    line-height:1.4;
+  }
+  input[type=text]:focus, textarea:focus{ border-color:var(--accent); }
   button{
-    font-family:'IBM Plex Mono', monospace;
+    font-family:'Poppins', sans-serif;
     font-weight:600;
     font-size:15px;
     border:none;
-    border-radius:10px;
+    border-radius:var(--pill);
     padding:14px 18px;
     cursor:pointer;
     width:100%;
     transition:transform .08s ease, opacity .15s ease;
   }
   button:active{ transform:scale(0.98); }
-  button.primary{ background:var(--gold); color:#241a05; }
-  button.secondary{ background:transparent; color:var(--cream); border:1px solid #3a4178; }
-  button.danger{ background:transparent; color:var(--coral); border:1px solid #6b3327; }
-  button:disabled{ opacity:.4; cursor:default; }
+  button.primary{ background:var(--accent); color:var(--accent-ink); }
+  button.secondary{ background:#f6f7fc; color:var(--text); border:1px solid var(--border-strong); }
+  button.danger{ background:var(--danger-bg); color:var(--danger); border:1px solid #f6d9cd; }
+  button:disabled{ opacity:.45; cursor:default; }
   .row{ display:flex; gap:10px; }
   .row > *{ flex:1; }
-  .code-badge{
-    font-family:'IBM Plex Mono', monospace;
-    font-weight:700;
-    letter-spacing:.25em;
-    font-size:22px;
-    color:var(--gold);
-    background:rgba(232,185,74,.08);
-    border:1px dashed rgba(232,185,74,.5);
-    border-radius:10px;
-    padding:10px 14px;
-    text-align:center;
-  }
   .players{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
   .chip{
     display:flex; align-items:center; gap:6px;
-    background:var(--ink-3); border-radius:20px; padding:6px 12px 6px 6px;
+    background:var(--panel); border-radius:20px; padding:6px 12px 6px 6px;
     font-size:13px;
   }
   .avatar{
-    width:22px;height:22px;border-radius:50%;
+    width:24px;height:24px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;
-    font-size:11px; font-weight:700; color:#161A33;
-    background:var(--gold);
+    font-size:11px; font-weight:700; color:#fff;
+    background:var(--accent);
     flex-shrink:0;
   }
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
   .question{
-    font-family:'Fraunces', serif;
-    font-style:italic;
     font-weight:600;
-    font-size:20px;
-    line-height:1.4;
-    color:var(--cream);
-    margin:6px 0 16px;
+    font-size:19px;
+    line-height:1.45;
+    color:var(--text);
+    margin:8px 0 16px;
   }
-  .answer-reveal{
-    background:rgba(232,185,74,.1);
-    border:1px solid rgba(232,185,74,.4);
-    border-radius:10px;
-    padding:12px 14px;
-    font-size:14px;
-    margin-bottom:16px;
-  }
-  .answer-reveal b{ color:var(--gold); }
   .option-card{
     position:relative;
-    background:var(--ink-3);
-    border:1px solid #3a4178;
-    border-radius:12px;
+    background:#f6f7fc;
+    border:1px solid var(--border-strong);
+    border-radius:var(--radius-sm);
     padding:14px 16px;
     margin-bottom:12px;
     cursor:pointer;
     transition:border-color .15s ease, background .15s ease;
   }
-  .option-card:hover{ border-color:var(--gold); }
-  .option-card.selected{ border-color:var(--gold); background:rgba(232,185,74,.12); }
-  .option-card.correct{ border-color:var(--gold); background:rgba(232,185,74,.15); }
-  .option-card.wrong-picked{ border-color:var(--coral); background:rgba(228,87,46,.1); }
+  .option-card:hover{ border-color:var(--accent); }
+  .option-card.selected{ border-color:var(--accent); background:var(--correct-bg); }
+  .option-card.correct{ border-color:var(--accent); background:var(--correct-bg); }
+  .option-card.wrong-picked{ border-color:var(--danger); background:var(--danger-bg); }
   .option-card .stamp{
     position:absolute; top:10px; right:12px;
     font-size:10px; font-weight:700; letter-spacing:.08em;
     padding:3px 8px; border-radius:6px;
   }
-  .stamp.wahr{ background:var(--gold); color:#241a05; }
-  .stamp.erfunden{ background:var(--coral); color:#2a0d05; }
+  .stamp.wahr{ background:var(--accent); color:#fff; }
+  .stamp.erfunden{ background:var(--danger); color:#fff; }
   .option-text{ font-size:15px; line-height:1.4; padding-right:60px; }
   .option-meta{ font-size:11px; color:var(--muted); margin-top:8px; }
   .scoreboard-row{
     display:flex; justify-content:space-between; align-items:center;
-    padding:10px 0; border-bottom:1px solid #2a3163;
+    padding:10px 0; border-bottom:1px solid var(--border);
     font-size:14px;
   }
   .scoreboard-row:last-child{ border-bottom:none; }
-  .scoreboard-row .pts{ font-weight:700; color:var(--gold); }
+  .scoreboard-row .pts{ font-weight:700; color:var(--accent); }
   .progress{ font-size:12px; color:var(--muted); margin-top:10px; }
-  .error{ color:var(--coral); font-size:13px; margin-bottom:10px; min-height:16px; }
+  .error{ color:var(--danger); font-size:13px; margin-bottom:10px; min-height:16px; }
   .topbar{
     display:flex; justify-content:space-between; align-items:center;
     margin-bottom:16px; font-size:12px; color:var(--muted);
   }
-  .topbar .code{ color:var(--gold); font-weight:700; letter-spacing:.15em; }
+  .topbar .code{ color:var(--accent); font-weight:700; letter-spacing:.15em; }
   .install-hint{
     margin-top:auto;
     padding-top:18px;
@@ -206,19 +211,36 @@
     line-height:1.5;
     text-align:center;
   }
-  .spinner{
-    display:inline-block; width:14px; height:14px;
-    border:2px solid var(--muted); border-top-color:var(--gold);
-    border-radius:50%; animation:spin .7s linear infinite; vertical-align:-2px;
-  }
-  @keyframes spin{ to{ transform:rotate(360deg); } }
 </style>
 </head>
 <body>
 <div id="root" class="wrap"></div>
 
-<script>
-// ---------- Fragenkatalog (original, keine Übernahme fremder Kartentexte) ----------
+<script type="module">
+// =====================================================================
+// FIREBASE-KONFIGURATION
+// Werte aus: Firebase Console -> Projekteinstellungen -> "Meine Apps" ->
+// Web-App -> SDK-Konfiguration. Diese Werte sind NICHT geheim (sie stehen
+// bei jeder Firebase-Web-App offen im Client-Code) - der eigentliche Schutz
+// kommt über die Firestore-Regeln (siehe README.md), nicht über
+// Geheimhaltung dieser Datei.
+// =====================================================================
+const firebaseConfig = {
+  apiKey: "DEIN_API_KEY",
+  authDomain: "DEIN_PROJEKT.firebaseapp.com",
+  projectId: "DEIN_PROJEKT",
+  storageBucket: "DEIN_PROJEKT.appspot.com",
+  messagingSenderId: "DEINE_SENDER_ID",
+  appId: "DEINE_APP_ID"
+};
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, runTransaction
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+
+// ---------- Fragenkatalog ----------
 const QUESTIONS = [
   {p:"In einem Dorf in den peruanischen Anden begrüßen sich Fremde traditionell, indem sie ____.", a:"sich gegenseitig kurz die Zunge zeigen"},
   {p:"Der Fachbegriff „Petrichor“ bezeichnet ____.", a:"den charakteristischen Geruch von Regen auf trockener Erde"},
@@ -290,21 +312,60 @@ const QUESTIONS = [
   {p:"1814 ergoss sich in London eine Flutwelle aus über einer Million Litern ____ durch die Straßen und riss sogar Häuser mit.", a:"Bier, nachdem ein riesiger Lagertank in einer Brauerei geborsten war", cat:"Schräges Ereignis"}
 ];
 
-// ---------- Storage helpers (Claudes offizielle Artefakt-Speicherfunktion) ----------
-// Funktioniert nur, wenn dieses Artefakt veröffentlicht ("Publish") wurde.
-async function sGet(key, shared){
-  try{ const r = await window.storage.get(key, !!shared); return r ? r.value : null; }
-  catch(e){ return null; }
-}
-async function sSet(key, value, shared){
-  try{ return await window.storage.set(key, value, !!shared); }
-  catch(e){ return null; }
-}
-async function sList(prefix, shared){
-  try{ const r = await window.storage.list(prefix, !!shared); return r ? r.keys : []; }
-  catch(e){ return []; }
+// ---------- Firebase Setup ----------
+const isConfigured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("DEIN_");
+let app = null, db = null, auth = null;
+if(isConfigured){
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
 }
 
+function ensureAuth(){
+  return new Promise((resolve, reject)=>{
+    if(!auth){ reject(new Error("Firebase nicht konfiguriert")); return; }
+    if(auth.currentUser){ resolve(auth.currentUser); return; }
+    const unsub = onAuthStateChanged(auth, user=>{
+      if(user){ unsub(); resolve(user); }
+    }, err=>{ unsub(); reject(err); });
+    signInAnonymously(auth).catch(err=>{ unsub(); reject(err); });
+  });
+}
+
+function roomRef(){ return doc(db, 'rooms', me.code); }
+function playersCol(){ return collection(db, 'rooms', me.code, 'players'); }
+function submissionsCol(){ return collection(db, 'rooms', me.code, 'submissions'); }
+function votesCol(){ return collection(db, 'rooms', me.code, 'votes'); }
+function subDocId(round, pid){ return `${round}_${pid}`; }
+
+function initialGame(){
+  return { phase:"lobby", round:0, questionIndex:null, usedQuestions:[], options:null, totalRounds:null, tally:null, votes:null, correctIdx:null };
+}
+
+// Ändert den Spielzustand nur, wenn er noch in der erwarteten Phase ist.
+// Wichtig, weil mehrere Geräte gleichzeitig denselben automatischen
+// Phasenwechsel auslösen können (alle sehen "alle fertig" im selben Moment) -
+// die Transaktion sorgt dafür, dass nur der erste Versuch etwas schreibt.
+async function transitionPhase(expectedPhase, buildPatch){
+  await runTransaction(db, async (tx)=>{
+    const snap = await tx.get(roomRef());
+    const data = snap.data();
+    if(!data || data.game.phase !== expectedPhase) return;
+    const patch = buildPatch(data.game, data.scores || {});
+    if(patch) tx.update(roomRef(), patch);
+  });
+}
+
+// ---------- Helpers ----------
+function loadOrCreateId(){
+  try{
+    const stored = localStorage.getItem('bluffpartyspiel_pid');
+    if(stored) return stored;
+    const id = uid();
+    localStorage.setItem('bluffpartyspiel_pid', id);
+    return id;
+  }catch(e){ return uid(); }
+}
 function uid(){ return Math.random().toString(36).slice(2,10); }
 function makeCode(){
   const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -325,92 +386,108 @@ function shuffle(arr){
 
 // ---------- App state ----------
 const root = document.getElementById('root');
-let me = { id: uid(), name: "", code: "" };
+let me = { id: loadOrCreateId(), name: "", code: "" };
 let joined = false;
-let pollTimer = null;
-let localSelectedOption = null; // during voting, before vote is saved
-let myLastSubmittedRound = -1; // welche Runde ich meine Antwort schon abgeschickt habe
-let myLastVotedRound = -1; // welche Runde ich schon abgestimmt habe
+let unsubscribers = [];
 let localAnswerDraft = "";
 let errorMsg = "";
 let lobbyRoundsDraft = 8;
-let cache = { players: [], game: null, scores: {} };
+let connTestResult = "";
+let autoAdvanceKey = null;
+let cache = { players: [], game: null, scores: {}, submissions: [], votes: [] };
 
-function playersKey(){ return `room:${me.code}:players`; }
-function gameKey(){ return `room:${me.code}:game`; }
-function scoresKey(){ return `room:${me.code}:scores`; }
-function subKey(round, pid){ return `room:${me.code}:sub:${round}:${pid}`; }
-function subPrefix(round){ return `room:${me.code}:sub:${round}:`; }
-function voteKey(round, pid){ return `room:${me.code}:vote:${round}:${pid}`; }
-function votePrefix(round){ return `room:${me.code}:vote:${round}:`; }
+function unsubscribeAll(){
+  unsubscribers.forEach(u=>u());
+  unsubscribers = [];
+}
 
-async function refresh(){
-  if(!joined) return;
-  const [playersRaw, gameRaw, scoresRaw] = await Promise.all([
-    sGet(playersKey(), true), sGet(gameKey(), true), sGet(scoresKey(), true)
-  ]);
-  cache.players = playersRaw ? JSON.parse(playersRaw) : [];
-  cache.game = gameRaw ? JSON.parse(gameRaw) : null;
-  cache.scores = scoresRaw ? JSON.parse(scoresRaw) : {};
-  render();
-  // Automatischer Fortschritt: niemand ist mehr "Vorleser:in", daher prüft
-  // jedes Gerät im Hintergrund, ob alle Antworten/Stimmen da sind, und einer
-  // von ihnen schaltet die Runde weiter (idempotent genug für eine kleine
-  // Gruppe – im seltenen Fall eines Gleichstands passiert das nur doppelt).
-  if(cache.game && cache.game.phase === "writing"){
-    maybeAdvanceToVoting();
-  } else if(cache.game && cache.game.phase === "voting"){
-    maybeAdvanceToReveal();
+function subscribeToRoom(){
+  unsubscribeAll();
+  unsubscribers.push(onSnapshot(roomRef(), snap=>{
+    const data = snap.data();
+    cache.game = data ? data.game : null;
+    cache.scores = data ? (data.scores || {}) : {};
+    render();
+  }, err=>{ errorMsg = "Verbindung verloren: " + err.message; render(); }));
+
+  unsubscribers.push(onSnapshot(playersCol(), snap=>{
+    cache.players = snap.docs
+      .map(d=>({ id: d.id, ...d.data() }))
+      .sort((a,b)=>{
+        const ta = a.joinedAt && a.joinedAt.toMillis ? a.joinedAt.toMillis() : 0;
+        const tb = b.joinedAt && b.joinedAt.toMillis ? b.joinedAt.toMillis() : 0;
+        return ta - tb;
+      });
+    render();
+  }));
+
+  unsubscribers.push(onSnapshot(submissionsCol(), snap=>{
+    cache.submissions = snap.docs.map(d=>d.data());
+    render();
+  }));
+
+  unsubscribers.push(onSnapshot(votesCol(), snap=>{
+    cache.votes = snap.docs.map(d=>d.data());
+    render();
+  }));
+}
+
+function countSubmissionsForRound(round){
+  return cache.submissions.filter(s=>s.round===round).length;
+}
+function countVotesForRound(round){
+  return cache.votes.filter(v=>v.round===round).length;
+}
+
+// Prüft nach jedem Datenupdate, ob alle fertig sind, und schaltet dann
+// automatisch weiter (Schreiben -> Abstimmen -> Auflösung). So kann in jeder
+// Runde wirklich jede:r mitspielen, ohne auf eine feste "Vorleser:in"-Person
+// zu warten, die selbst aussetzen müsste.
+function maybeAutoAdvance(){
+  if(!cache.game || !joined) return;
+  const game = cache.game;
+  const total = cache.players.length;
+  if(total < 2) return;
+
+  if(game.phase === 'writing'){
+    if(countSubmissionsForRound(game.round) >= total){
+      const key = `voting-${game.round}`;
+      if(autoAdvanceKey !== key){ autoAdvanceKey = key; goToVoting(); }
+    }
+  } else if(game.phase === 'voting'){
+    if(countVotesForRound(game.round) >= total){
+      const key = `reveal-${game.round}`;
+      if(autoAdvanceKey !== key){ autoAdvanceKey = key; revealResults(); }
+    }
   }
 }
 
-function startPolling(){
-  if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(refresh, 2200);
-}
-
 // ---------- Actions ----------
-async function joinRoom(name, code, isNew){
+async function joinRoom(name, code){
   errorMsg = "";
   name = name.trim(); code = code.trim().toUpperCase();
   if(!name){ errorMsg = "Bitte gib deinen Namen ein."; render(); return; }
   if(!code || code.length<3){ errorMsg = "Bitte gib einen gültigen Raumcode ein."; render(); return; }
   me.name = name; me.code = code;
 
-  // Mehrere Personen können fast zeitgleich beitreten. Da die letzte
-  // Schreibaktion gewinnt, könnte der eigene Eintrag sonst überschrieben
-  // werden. Deshalb: schreiben, gegenprüfen, bei Bedarf wiederholen.
-  let joinedSuccessfully = false;
-  for(let attempt=0; attempt<6 && !joinedSuccessfully; attempt++){
-    if(attempt>0) await new Promise(r=>setTimeout(r, 150 + Math.random()*300));
-    let playersRaw = await sGet(playersKey(), true);
-    let players = playersRaw ? JSON.parse(playersRaw) : [];
-    if(!players.find(p=>p.id===me.id)){
-      players.push({ id: me.id, name: me.name });
-      await sSet(playersKey(), JSON.stringify(players), true);
-    }
-    const check = await sGet(playersKey(), true);
-    const checkList = check ? JSON.parse(check) : [];
-    joinedSuccessfully = !!checkList.find(p=>p.id===me.id);
-  }
-  if(!joinedSuccessfully){
-    errorMsg = "Beitritt hat gerade nicht geklappt (zu viele gleichzeitige Beitritte). Bitte noch einmal auf „Raum beitreten“ tippen.";
+  try{
+    await ensureAuth();
+    await runTransaction(db, async (tx)=>{
+      const snap = await tx.get(roomRef());
+      if(!snap.exists()){
+        tx.set(roomRef(), { game: initialGame(), scores: {} });
+      }
+    });
+    await setDoc(doc(playersCol(), me.id), { name: me.name, joinedAt: new Date() });
+  }catch(e){
+    errorMsg = "Beitritt fehlgeschlagen: " + (e && e.message ? e.message : String(e));
     render();
     return;
   }
 
-  let gameRaw = await sGet(gameKey(), true);
-  if(!gameRaw){
-    const game = { phase:"lobby", round:0, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
-    await sSet(gameKey(), JSON.stringify(game), true);
-  }
-  let scoresRaw = await sGet(scoresKey(), true);
-  if(!scoresRaw){
-    await sSet(scoresKey(), JSON.stringify({}), true);
-  }
   joined = true;
-  startPolling();
-  await refresh();
+  subscribeToRoom();
+  render();
 }
 
 function pickQuestionIndex(used){
@@ -419,11 +496,6 @@ function pickQuestionIndex(used){
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
-// Baut den Rundenzustand passend zum Fragetyp: normale Fragen starten bei
-// "writing" (alle erfinden eine Antwort), Wahr/Falsch-Fragen springen direkt
-// zur Abstimmung, weil es dort nichts zu erfinden gibt. Es gibt keine
-// Vorleser:in mehr – die App selbst kennt die richtige Antwort, damit jede
-// Person in jeder Runde mitschreiben und mitraten kann.
 function buildRoundPatch(qIndex){
   const q = QUESTIONS[qIndex];
   if(q.type === "truefalse"){
@@ -436,10 +508,6 @@ function buildRoundPatch(qIndex){
   return { phase: "writing", questionIndex: qIndex, options: null };
 }
 
-// Leichte Rechtschreib-/Formatglättung: keine echte Fehlerkorrektur (dafür
-// bräuchte es ein Wörterbuch), aber Groß-/Kleinschreibung, doppelte
-// Leerzeichen und Satzzeichen werden vereinheitlicht, damit Tippfehler oder
-// fehlende Punkte nicht verraten, wer eine Antwort geschrieben hat.
 function beautifyText(text){
   let t = text.trim().replace(/\s+/g, ' ');
   if(t.length === 0) return t;
@@ -452,127 +520,112 @@ function beautifyText(text){
 }
 
 async function startGame(rounds){
-  const players = cache.players;
-  if(players.length < 2) return;
+  if(cache.players.length < 2) return;
   const totalRounds = (rounds && rounds > 0) ? rounds : 8;
-  const qIndex = pickQuestionIndex([]);
-  const patch = buildRoundPatch(qIndex);
-  const game = {
-    round:1, usedQuestions:[qIndex],
-    totalRounds, tally:null, votes:null, correctIdx:null, ...patch
-  };
-  await sSet(gameKey(), JSON.stringify(game), true);
-  await refresh();
+  await transitionPhase('lobby', ()=>{
+    const qIndex = pickQuestionIndex([]);
+    const patch = buildRoundPatch(qIndex);
+    return { game: { round:1, usedQuestions:[qIndex], totalRounds, tally:null, votes:null, correctIdx:null, ...patch } };
+  });
 }
 
 async function resetGame(){
-  const game = { phase:"lobby", round:0, questionIndex:null, usedQuestions:[], options:null, totalRounds:null };
-  await sSet(gameKey(), JSON.stringify(game), true);
-  await sSet(scoresKey(), JSON.stringify({}), true);
-  await refresh();
+  await updateDoc(roomRef(), { game: initialGame(), scores: {} });
 }
 
 async function submitAnswer(){
   const text = beautifyText(localAnswerDraft);
-  if(!text) return;
-  await sSet(subKey(cache.game.round, me.id), JSON.stringify({ name: me.name, text }), true);
+  if(!text || !cache.game) return;
+  const round = cache.game.round;
+  await setDoc(doc(submissionsCol(), subDocId(round, me.id)), { round, pid: me.id, name: me.name, text });
   localAnswerDraft = "";
-  await refresh();
+  render();
 }
 
-async function countSubmissions(){
-  const keys = await sList(subPrefix(cache.game.round), true);
-  return keys.length;
-}
-
-// Alle Spieler:innen schreiben eine Antwort (es gibt keine Vorleser:in mehr,
-// die ausgenommen wäre). Sobald alle abgeschickt haben, baut die App die
-// Auswahl (richtige Antwort + alle erfundenen) und schaltet automatisch zur
-// Abstimmung weiter.
-async function maybeAdvanceToVoting(){
-  const game = cache.game;
-  if(!game || game.phase !== "writing") return;
-  const keys = await sList(subPrefix(game.round), true);
-  if(keys.length < cache.players.length) return;
-  const subs = [];
-  for(const k of keys){
-    const raw = await sGet(k, true);
-    if(raw){ const v = JSON.parse(raw); subs.push({ authorId: k.split(":").pop(), text: v.text }); }
-  }
-  if(subs.length < cache.players.length) return; // ein Wert konnte gerade nicht gelesen werden – später erneut versuchen
-  const q = QUESTIONS[game.questionIndex];
-  const options = shuffle([
-    { authorId: "__CORRECT__", text: q.a },
-    ...subs
-  ]);
-  const updated = { ...game, phase:"voting", options };
-  await sSet(gameKey(), JSON.stringify(updated), true);
-  await refresh();
+async function goToVoting(){
+  await transitionPhase('writing', (game)=>{
+    const subs = cache.submissions
+      .filter(s=>s.round===game.round)
+      .map(s=>({ authorId: s.pid, text: s.text }));
+    const q = QUESTIONS[game.questionIndex];
+    const options = shuffle([{ authorId: "__CORRECT__", text: q.a }, ...subs]);
+    return { game: { ...game, phase:"voting", options } };
+  });
 }
 
 async function castVote(optionIdx){
-  await sSet(voteKey(cache.game.round, me.id), String(optionIdx), true);
-  localSelectedOption = optionIdx;
-  await refresh();
+  if(!cache.game) return;
+  const round = cache.game.round;
+  await setDoc(doc(votesCol(), subDocId(round, me.id)), { round, pid: me.id, optionIdx });
+  render();
 }
 
-async function countVotes(){
-  const keys = await sList(votePrefix(cache.game.round), true);
-  return keys.length;
-}
+async function revealResults(){
+  await transitionPhase('voting', (game, scores)=>{
+    const round = game.round;
+    const roundVotes = cache.votes.filter(v=>v.round===round);
 
-// Sobald alle Spieler:innen abgestimmt haben, wertet die App automatisch aus.
-async function maybeAdvanceToReveal(){
-  const game = cache.game;
-  if(!game || game.phase !== "voting") return;
-  const keys = await sList(votePrefix(game.round), true);
-  if(keys.length < cache.players.length) return;
+    const tally = game.options.map(()=>0);
+    roundVotes.forEach(v=>{ if(tally[v.optionIdx]!==undefined) tally[v.optionIdx]++; });
 
-  const votes = {};
-  for(const k of keys){
-    const pid = k.split(":").pop();
-    const raw = await sGet(k, true);
-    votes[pid] = raw !== null ? parseInt(raw,10) : null;
-  }
-  const tally = game.options.map(()=>0);
-  Object.values(votes).forEach(idx=>{ if(idx!==null && tally[idx]!==undefined) tally[idx]++; });
+    const correctIdx = game.options.findIndex(o=>o.authorId==="__CORRECT__");
+    const newScores = { ...scores };
+    cache.players.forEach(p=>{ if(!(p.id in newScores)) newScores[p.id]=0; });
 
-  const correctIdx = game.options.findIndex(o=>o.authorId==="__CORRECT__");
-  const scores = { ...cache.scores };
-  cache.players.forEach(p=>{ if(!(p.id in scores)) scores[p.id]=0; });
+    const votesByPid = {};
+    roundVotes.forEach(v=>{ votesByPid[v.pid] = v.optionIdx; });
 
-  // Punkt fürs richtige Erraten
-  Object.entries(votes).forEach(([pid, idx])=>{
-    if(idx===correctIdx){ scores[pid] = (scores[pid]||0) + 1; }
+    Object.entries(votesByPid).forEach(([pid, idx])=>{
+      if(idx===correctIdx){ newScores[pid] = (newScores[pid]||0) + 1; }
+    });
+    game.options.forEach((opt, idx)=>{
+      const isRealAuthor = cache.players.some(p=>p.id===opt.authorId);
+      if(isRealAuthor && idx!==correctIdx){
+        const foolCount = roundVotes.filter(v=>v.optionIdx===idx).length;
+        newScores[opt.authorId] = (newScores[opt.authorId]||0) + foolCount;
+      }
+    });
+
+    return { scores: newScores, game: { ...game, phase:"reveal", tally, votes: votesByPid, correctIdx } };
   });
-  // Punkt für jede Person, die auf eine erfundene Antwort hereingefallen ist
-  // (bei Wahr/Falsch-Fragen gibt es keine erfundenen Antworten von Spielern,
-  // daher nur werten, wenn die Option wirklich von jemandem stammt)
-  game.options.forEach((opt, idx)=>{
-    const isRealAuthor = cache.players.some(p=>p.id===opt.authorId);
-    if(isRealAuthor && idx!==correctIdx){
-      const foolCount = Object.values(votes).filter(v=>v===idx).length;
-      scores[opt.authorId] = (scores[opt.authorId]||0) + foolCount;
-    }
-  });
-
-  await sSet(scoresKey(), JSON.stringify(scores), true);
-  const updated = { ...game, phase:"reveal", tally, votes, correctIdx };
-  await sSet(gameKey(), JSON.stringify(updated), true);
-  await refresh();
 }
 
 async function nextRound(){
-  const game = cache.game;
-  const qIndex = pickQuestionIndex(game.usedQuestions);
-  const patch = buildRoundPatch(qIndex);
-  const updated = {
-    ...game, round: game.round+1,
-    usedQuestions:[...game.usedQuestions, qIndex],
-    tally:null, votes:null, correctIdx:null, ...patch
-  };
-  await sSet(gameKey(), JSON.stringify(updated), true);
-  await refresh();
+  await transitionPhase('reveal', (game)=>{
+    const qIndex = pickQuestionIndex(game.usedQuestions);
+    const patch = buildRoundPatch(qIndex);
+    return { game: {
+      ...game, round: game.round+1,
+      usedQuestions:[...game.usedQuestions, qIndex],
+      tally:null, votes:null, correctIdx:null, ...patch
+    } };
+  });
+}
+
+async function testConnection(){
+  connTestResult = "Teste Firebase-Verbindung …";
+  render();
+  if(!isConfigured){
+    connTestResult = "Die firebase-config oben im <script>-Tag enthält noch Platzhalterwerte. Bitte zuerst ausfüllen (siehe README.md).";
+    render();
+    return;
+  }
+  const steps = [];
+  try{
+    const user = await ensureAuth();
+    steps.push("Anmeldung (anonym): ok ✓");
+    const testRef = doc(db, "connTest", user.uid);
+    const testValue = "test-" + Date.now();
+    await setDoc(testRef, { value: testValue, at: new Date() });
+    steps.push("Schreiben: ok ✓");
+    const snap = await getDoc(testRef);
+    const readBack = snap.exists() ? snap.data().value : null;
+    steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
+  }catch(e){
+    steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
+  }
+  connTestResult = steps.join(' · ');
+  render();
 }
 
 // ---------- Render ----------
@@ -590,28 +643,11 @@ function el(tag, props, ...children){
   return e;
 }
 
-let connTestResult = "";
-async function testConnection(){
-  connTestResult = "Teste Speicherfunktion …";
-  render();
-  if(typeof window.storage === 'undefined'){
-    connTestResult = "window.storage ist nicht verfügbar. Das Artefakt muss veröffentlicht sein, damit die Speicherfunktion überhaupt existiert.";
-    render();
-    return;
-  }
-  const steps = [];
-  try{
-    const testValue = "test-" + Date.now();
-    const setResult = await window.storage.set('__verbindungstest__', testValue, true);
-    steps.push(`Schreiben: ${setResult ? 'ok ✓' : 'fehlgeschlagen ✗'}`);
-    const getResult = await window.storage.get('__verbindungstest__', true);
-    const readBack = getResult ? getResult.value : null;
-    steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
-  }catch(e){
-    steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
-  }
-  connTestResult = steps.join(' · ');
-  render();
+function renderBrand(){
+  return el('div', {class:'brand'},
+    el('div', {class:'mark'}, 'Bluff', el('span', {class:'accent'}, '-Partyspiel')),
+    el('div', {class:'sub'}, 'Erfinde die Antwort. Erkenne die Wahrheit.')
+  );
 }
 
 function renderJoinScreen(){
@@ -620,15 +656,12 @@ function renderJoinScreen(){
   const codeInput = el('input', {type:'text', placeholder:'z. B. FXQK', value: me.code, style:'text-transform:uppercase; letter-spacing:.15em;'});
   codeInput.addEventListener('input', e=>{ me.code = e.target.value.toUpperCase(); });
 
-  const joinBtn = el('button', {class:'primary', onclick: ()=>joinRoom(me.name, me.code, false)}, 'Raum beitreten');
+  const joinBtn = el('button', {class:'primary', onclick: ()=>joinRoom(nameInput.value, codeInput.value)}, 'Raum beitreten');
   const createBtn = el('button', {class:'secondary', onclick: ()=>{ const c = makeCode(); codeInput.value = c; me.code = c; }}, 'Neuen Raumcode erzeugen');
   const testBtn = el('button', {class:'secondary', onclick: testConnection}, 'Verbindung testen (Diagnose)');
 
   return el('div', null,
-    el('div', {class:'brand'},
-      el('span', {class:'mark'}, 'Schwindelrunde'),
-      el('span', {class:'sub'}, 'Bluff-Partyspiel')
-    ),
+    renderBrand(),
     el('div', {class:'card'},
       el('label', null, 'Dein Name'),
       nameInput,
@@ -677,12 +710,12 @@ function renderLobby(){
     renderTopbar(),
     el('div', {class:'card'},
       el('h2', null, 'Warteraum'),
-      el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind, dann kann jede:r starten. (Vorübergehend zum Testen abgesenkt – für die richtige Bluff-Dynamik sind später 3+ empfehlenswert.)'),
+      el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Jede Person schreibt und stimmt in jeder Runde mit – die App liest die Fragen vor.'),
       renderPlayers(),
       el('div', {style:'height:10px'}),
       el('label', null, 'Rundenzahl'),
       roundsInput,
-      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Bei jeder Frage schreibt und rät jede Person mit – die App kennt die richtige Antwort. Nach dieser Rundenzahl endet das Spiel.'),
+      el('div', {class:'hint', style:'margin-bottom:12px'}, 'Das Spiel läuft über diese Anzahl Runden, dann gibt es den Endstand.'),
       el('button', {class:'primary', disabled: !enough ? 'true' : undefined,
         onclick: ()=>startGame(lobbyRoundsDraft && lobbyRoundsDraft>0 ? lobbyRoundsDraft : 8)
       }, enough ? 'Spiel starten' : `Noch ${2-cache.players.length} Spieler:in(nen) nötig`)
@@ -693,59 +726,50 @@ function renderLobby(){
 function renderWriting(){
   const game = cache.game;
   const q = QUESTIONS[game.questionIndex];
+  const round = game.round;
+  const n = countSubmissionsForRound(round);
+  const total = cache.players.length;
+  const alreadySubmitted = cache.submissions.some(s=>s.round===round && s.pid===me.id);
+
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
-  const alreadySubmitted = myLastSubmittedRound === game.round;
+  const ta = el('textarea', {
+    placeholder:'Denk dir eine möglichst überzeugende, aber erfundene Antwort aus …',
+    spellcheck:'true', lang:'de', autocapitalize:'sentences', autocorrect:'on'
+  });
+  ta.value = localAnswerDraft;
+  ta.addEventListener('input', e=>{ localAnswerDraft = e.target.value; });
 
   const body = [
     el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
-    el('div', {class:'question'}, q.p)
+    el('div', {class:'question'}, q.p),
+    el('label', null, 'Deine erfundene Antwort'),
+    ta,
+    el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; await submitAnswer(); } }, alreadySubmitted ? 'Antwort erneut abschicken' : 'Antwort abschicken'),
+    el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.'),
+    el('div', {class:'progress'}, `${n} von ${total} Antworten sind da. Es geht automatisch weiter, sobald alle fertig sind.`)
   ];
 
-  if(alreadySubmitted){
-    body.push(
-      el('div', {class:'progress', id:'sub-progress'}, 'Antwort abgeschickt – warte auf die anderen …')
-    );
-  } else {
-    const ta = el('textarea', {
-      placeholder:'Denk dir eine möglichst überzeugende, aber erfundene Antwort aus …',
-      spellcheck:'true', lang:'de', autocapitalize:'sentences', autocorrect:'on'
-    });
-    ta.value = localAnswerDraft;
-    ta.addEventListener('input', e=>{ localAnswerDraft = e.target.value; });
-    body.push(
-      el('label', null, 'Deine erfundene Antwort'),
-      ta,
-      el('button', {class:'primary', onclick: async ()=>{ localAnswerDraft = ta.value; myLastSubmittedRound = game.round; await submitAnswer(); } }, 'Antwort abschicken'),
-      el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.')
-    );
-  }
-
   const card = el('div', {class:'card'}, ...body);
-  const wrap = el('div', null, renderTopbar(), card);
-
-  // Fortschritt asynchron nachladen (nicht blockierend)
-  countSubmissions().then(n=>{
-    const progEl = card.querySelector('#sub-progress');
-    if(progEl) progEl.textContent = `Antwort abgeschickt – ${n} von ${cache.players.length} sind da.`;
-  });
-
-  return wrap;
+  return el('div', null, renderTopbar(), card);
 }
 
 function renderVoting(){
   const game = cache.game;
   const q = QUESTIONS[game.questionIndex];
-  const alreadyVoted = localSelectedOption !== null && myLastVotedRound === game.round;
+  const round = game.round;
+  const myVote = cache.votes.find(v=>v.round===round && v.pid===me.id);
+  const n = countVotesForRound(round);
+  const total = cache.players.length;
 
   const optionEls = game.options.map((opt, idx)=>{
     const isMine = opt.authorId === me.id;
-    const isSelected = alreadyVoted && localSelectedOption === idx;
+    const isSelected = myVote && myVote.optionIdx===idx;
     const card = el('div', {class:'option-card' + (isSelected?' selected':'')},
       el('div', {class:'option-text'}, opt.text),
       isMine ? el('div', {class:'option-meta'}, 'Das ist deine eigene Antwort') : null
     );
-    if(!isMine && !alreadyVoted){
-      card.addEventListener('click', ()=>{ myLastVotedRound = game.round; castVote(idx); });
+    if(!isMine && !myVote){
+      card.addEventListener('click', ()=>castVote(idx));
     }
     return card;
   });
@@ -754,24 +778,14 @@ function renderVoting(){
   const body = [
     el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
     el('div', {class:'question'}, q.p),
-    ...optionEls
+    ...optionEls,
+    el('div', {class:'progress'}, myVote
+      ? `${n} von ${total} Stimmen abgegeben. Es geht automatisch weiter, sobald alle abgestimmt haben.`
+      : 'Tippe auf die Antwort, die du für die echte hältst.')
   ];
 
-  if(alreadyVoted){
-    body.push(el('div', {class:'progress', id:'vote-progress'}, 'Stimme abgegeben – warte auf die anderen …'));
-  } else {
-    body.push(el('div', {class:'hint'}, 'Tippe auf die Antwort, die du für die echte hältst.'));
-  }
-
   const card = el('div', {class:'card'}, ...body);
-  const wrap = el('div', null, renderTopbar(), card);
-
-  countVotes().then(n=>{
-    const progEl = card.querySelector('#vote-progress');
-    if(progEl) progEl.textContent = `Stimme abgegeben – ${n} von ${cache.players.length} sind da.`;
-  });
-
-  return wrap;
+  return el('div', null, renderTopbar(), card);
 }
 
 function renderReveal(){
@@ -819,6 +833,7 @@ function renderReveal(){
 }
 
 function render(){
+  maybeAutoAdvance();
   root.innerHTML = "";
   if(!joined){
     root.appendChild(renderJoinScreen());
@@ -835,15 +850,12 @@ function render(){
   }
 }
 
-if(typeof window.storage === 'undefined'){
+if(!isConfigured){
   root.appendChild(el('div', null,
-    el('div', {class:'brand'},
-      el('span', {class:'mark'}, 'Schwindelrunde'),
-      el('span', {class:'sub'}, 'Bluff-Partyspiel')
-    ),
+    renderBrand(),
     el('div', {class:'card'},
-      el('h2', null, 'Bitte zuerst veröffentlichen'),
-      el('p', {class:'hint'}, 'Diese Speicherfunktion ist Teil von Claudes Artefakten, funktioniert laut Anthropics Hilfe-Center aber erst, nachdem das Artefakt veröffentlicht wurde. Bitte oben im Artefakt-Fenster (z. B. über den kleinen Pfeil neben „Kopieren“) nach „Publish“ bzw. „Veröffentlichen“ suchen und das Artefakt veröffentlichen. Danach diese Seite über den neuen, veröffentlichten Link erneut öffnen.')
+      el('h2', null, 'Firebase noch nicht konfiguriert'),
+      el('p', {class:'hint'}, 'Trage deine Firebase-Projektdaten oben im <script>-Tag dieser Datei ein (siehe README.md) und lade diese Seite danach neu.')
     )
   ));
 } else {
