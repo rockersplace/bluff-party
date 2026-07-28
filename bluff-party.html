@@ -601,9 +601,9 @@ async function testConnection(){
   const steps = [];
   try{
     const testValue = "test-" + Date.now();
-    const setResult = await sSet('__verbindungstest__', testValue, true);
+    const setResult = await sSet('verbindungstest', testValue, true);
     steps.push(`Schreiben: ${setResult ? 'ok ✓' : 'fehlgeschlagen ✗'}`);
-    const readBack = await sGet('__verbindungstest__', true);
+    const readBack = await sGet('verbindungstest', true);
     steps.push(`Zurückgelesen: "${readBack}" ${readBack===testValue ? '(stimmt überein ✓)' : '(stimmt NICHT überein ✗)'}`);
   }catch(e){
     steps.push(`Fehler: ${e && e.message ? e.message : String(e)}`);
