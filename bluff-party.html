@@ -180,6 +180,32 @@
     font-weight:600;
   }
   .cat-tile-wide{ grid-column:1 / -1; }
+  .podium{
+    display:flex; align-items:flex-end; justify-content:center;
+    gap:10px; margin:18px 0 22px;
+  }
+  .podium-place{
+    display:flex; flex-direction:column; align-items:center;
+    width:31%;
+    opacity:0; transform:translateY(16px);
+    animation:podiumIn .45s ease forwards;
+  }
+  .podium-medal{ font-size:30px; margin-bottom:4px; }
+  .podium-name{
+    font-weight:700; font-size:13px; text-align:center;
+    margin-bottom:2px; word-break:break-word;
+  }
+  .podium-pts{ font-size:11px; color:var(--muted); margin-bottom:8px; }
+  .podium-bar{ width:100%; border-radius:12px 12px 0 0; }
+  .place-1{ order:2; animation-delay:.4s; }
+  .place-1 .podium-bar{ height:86px; background:linear-gradient(180deg, var(--accent), #ffb066); }
+  .place-2{ order:1; animation-delay:.2s; }
+  .place-2 .podium-bar{ height:60px; background:#c7cce0; }
+  .place-3{ order:3; animation-delay:0s; }
+  .place-3 .podium-bar{ height:40px; background:#e3bd94; }
+  @keyframes podiumIn{
+    to{ opacity:1; transform:translateY(0); }
+  }
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
   .confirm{ color:var(--accent); font-size:13px; font-weight:600; margin-top:6px; }
@@ -200,7 +226,12 @@
     cursor:pointer;
     transition:border-color .15s ease, background .15s ease;
   }
-  .option-card:hover{ border-color:var(--accent); }
+  /* Nur auf Geräten mit echtem Mauszeiger - sonst bleibt der Hover-Zustand
+     auf Touchscreens (iOS Safari) nach dem Antippen "hängen" und wirkt wie
+     eine bereits gewählte Antwort, bevor überhaupt getippt wurde. */
+  @media (hover: hover){
+    .option-card:hover{ border-color:var(--accent); }
+  }
   .option-card.selected{ border-color:var(--accent); background:var(--correct-bg); }
   .option-card.correct{ border-color:var(--accent); background:var(--correct-bg); }
   .option-card.wrong-picked{ border-color:var(--danger); background:var(--danger-bg); }
@@ -984,6 +1015,7 @@ function renderWriting(){
   const n = countSubmissionsForRound(round);
   const total = cache.players.length;
   const mySubmission = cache.submissions.find(s=>s.round===round && s.pid===me.id);
+  const donePids = new Set(cache.submissions.filter(s=>s.round===round).map(s=>s.pid));
 
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
   const ta = el('textarea', {
@@ -1007,7 +1039,7 @@ function renderWriting(){
     mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null,
     el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.'),
     el('div', {class:'progress'}, `${n} von ${total} Antworten sind da.`),
-    ...renderAdvanceControl(n, total, goToVoting, 'Weiter zur Abstimmung')
+    ...renderAdvanceControl(n, total, goToVoting, 'Weiter zur Abstimmung', donePids)
   ];
 
   const card = el('div', {class:'card'}, ...body);
@@ -1019,18 +1051,29 @@ function renderWriting(){
 // ein alter, inzwischen inaktiver Spieler-Eintrag aus einem früheren Test
 // noch in der Datenbank mitzählt). Sonst könnte die Spielleitung für immer
 // feststecken, wenn eine erwartete Antwort/Stimme nie kommt. Allen anderen
-// zeigt es nur einen Hinweis, wer gerade weiterschaltet.
-function renderAdvanceControl(n, total, onAdvance, label){
+// zeigt es nur einen Hinweis, wer gerade weiterschaltet. Zusätzlich werden
+// namentlich die Personen genannt, auf die noch gewartet wird (statt nur
+// einer Zahl), damit man in der Gruppe direkt weiß, wer noch dran ist.
+function renderAdvanceControl(n, total, onAdvance, label, donePids){
   const enough = n >= total;
+  const nodes = [];
   if(isHost()){
-    return [el('button', {
+    nodes.push(el('button', {
       class:'primary', style:'margin-top:10px',
       onclick: onAdvance
-    }, enough ? label : `${label} (${n} von ${total} fertig)`)];
+    }, enough ? label : `${label} (${n} von ${total} fertig)`));
+  } else {
+    nodes.push(el('div', {class:'hint', style:'margin-top:10px'},
+      `${hostName()} kann jederzeit weitergehen (${n} von ${total} fertig).`
+    ));
   }
-  return [el('div', {class:'hint', style:'margin-top:10px'},
-    `${hostName()} kann jederzeit weitergehen (${n} von ${total} fertig).`
-  )];
+  if(!enough && donePids){
+    const missing = cache.players.filter(p=>!donePids.has(p.id)).map(p=>p.name);
+    if(missing.length){
+      nodes.push(el('div', {class:'hint', style:'margin-top:4px'}, `Es fehlt noch: ${missing.join(', ')}.`));
+    }
+  }
+  return nodes;
 }
 
 function renderVoting(){
@@ -1040,6 +1083,7 @@ function renderVoting(){
   const myVote = cache.votes.find(v=>v.round===round && v.pid===me.id);
   const n = countVotesForRound(round);
   const total = cache.players.length;
+  const donePids = new Set(cache.votes.filter(v=>v.round===round).map(v=>v.pid));
 
   const optionEls = game.options.map((opt, idx)=>{
     const isMine = opt.authorId === me.id;
@@ -1062,7 +1106,7 @@ function renderVoting(){
     el('div', {class:'progress'}, myVote
       ? `${n} von ${total} Stimmen abgegeben.`
       : 'Tippe auf die Antwort, die du für die echte hältst.'),
-    ...(myVote ? renderAdvanceControl(n, total, revealResults, 'Auflösung zeigen') : [])
+    ...(myVote ? renderAdvanceControl(n, total, revealResults, 'Auflösung zeigen', donePids) : [])
   ];
 
   const card = el('div', {class:'card'}, ...body);
@@ -1088,43 +1132,102 @@ function renderReveal(){
   });
 
   const sorted = cache.players.slice().sort((a,b)=>(cache.scores[b.id]||0)-(cache.scores[a.id]||0));
-  const scoreRows = sorted.map((p,i)=>el('div', {class:'scoreboard-row'},
-    el('span', null, (i===0 ? '🏆 ' : '') + p.name + (p.id===me.id?' (du)':'')),
-    el('span', {class:'pts'}, String(cache.scores[p.id]||0))
-  ));
-
   const isFinalRound = game.totalRounds && game.round >= game.totalRounds;
 
   const body = [
     el('h3', null, 'Auflösung'),
     ...optionEls,
-    el('div', {style:'height:6px'}),
-    el('h3', null, isFinalRound ? 'Endstand' : 'Punktestand'),
-    ...scoreRows
+    el('div', {style:'height:6px'})
   ];
 
   // Weiter geht's - wie bei den anderen Phasen auch - nur über die
   // Spielleitung. Vorher kann sie hier die Kategorie für die nächste Runde
   // neu wählen, statt dass automatisch irgendeine Kategorie kommt.
   if(isFinalRound){
-    body.unshift(el('div', {class:'muted'}, `Letzte Runde (${game.round} von ${game.totalRounds}) gespielt 🎉`));
+    // Bei Punktegleichstand teilen sich mehrere Personen denselben Platz
+    // (dieselbe Treppchen-Stufe), statt willkürlich nach Beitrittsreihenfolge
+    // getrennt zu werden.
+    const groups = groupByScore(cache.players, cache.scores);
+    const podiumGroups = groups.slice(0,3);
+    const restGroups = groups.slice(3);
+
+    body.push(
+      el('div', {class:'muted'}, `Letzte Runde (${game.round} von ${game.totalRounds}) gespielt 🎉`),
+      el('h3', null, 'Siegerehrung'),
+      renderPodium(podiumGroups)
+    );
+    if(restGroups.length){
+      let rank = podiumGroups.reduce((sum,g)=>sum+g.players.length, 0) + 1;
+      restGroups.forEach(g=>{
+        g.players.forEach(p=>{
+          body.push(el('div', {class:'scoreboard-row'},
+            el('span', null, `${rank}. ${p.name}${p.id===me.id?' (du)':''}`),
+            el('span', {class:'pts'}, String(g.score))
+          ));
+        });
+        rank += g.players.length;
+      });
+    }
     if(isHost()){
       body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
     } else {
       body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} kann ein neues Spiel starten.`));
     }
-  } else if(isHost()){
-    body.push(
-      el('div', {style:'height:10px'}),
-      el('label', null, 'Kategorie für die nächste Runde'),
-      renderCategoryChips(nextCategoryDraft, cat=>{ nextCategoryDraft = cat; render(); }),
-      el('button', {class:'primary', style:'margin-top:14px', onclick: ()=>nextRound(nextCategoryDraft)}, 'Nächste Runde')
-    );
   } else {
-    body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} wählt die nächste Kategorie und startet die nächste Runde.`));
+    body.push(
+      el('h3', null, 'Punktestand'),
+      ...sorted.map((p,i)=>el('div', {class:'scoreboard-row'},
+        el('span', null, (i===0 ? '🏆 ' : '') + p.name + (p.id===me.id?' (du)':'')),
+        el('span', {class:'pts'}, String(cache.scores[p.id]||0))
+      ))
+    );
+    if(isHost()){
+      body.push(
+        el('div', {style:'height:10px'}),
+        el('label', null, 'Kategorie für die nächste Runde'),
+        renderCategoryChips(nextCategoryDraft, cat=>{ nextCategoryDraft = cat; render(); }),
+        el('button', {class:'primary', style:'margin-top:14px', onclick: ()=>nextRound(nextCategoryDraft)}, 'Nächste Runde')
+      );
+    } else {
+      body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} wählt die nächste Kategorie und startet die nächste Runde.`));
+    }
   }
 
   return el('div', null, ...renderTopbar(), el('div', {class:'card'}, ...body));
+}
+
+// Gruppiert Spieler:innen nach Punktestand (absteigend). Bei Punktegleichstand
+// landen mehrere Personen in derselben Gruppe und teilen sich später denselben
+// Platz bzw. dieselbe Treppchen-Stufe.
+function groupByScore(players, scores){
+  const byScore = new Map();
+  players.forEach(p=>{
+    const s = scores[p.id] || 0;
+    if(!byScore.has(s)) byScore.set(s, []);
+    byScore.get(s).push(p);
+  });
+  return [...byScore.entries()]
+    .sort((a,b)=>b[0]-a[0])
+    .map(([score, players])=>({ score, players }));
+}
+
+// Podium mit den ersten drei Punkte-Gruppen (2.-1.-3. von links nach rechts,
+// wie bei einer echten Siegerehrung), inkl. kleiner Einblend-Animation je
+// Platz. Bei Punktegleichstand stehen mehrere Namen auf derselben Stufe.
+function renderPodium(podiumGroups){
+  const medals = ['🥇','🥈','🥉'];
+  const displayOrder = [1,0,2];
+  return el('div', {class:'podium'},
+    ...displayOrder.filter(i=>podiumGroups[i]).map(i=>{
+      const group = podiumGroups[i];
+      return el('div', {class:`podium-place place-${i+1}`},
+        el('div', {class:'podium-medal'}, medals[i]),
+        ...group.players.map(p=>el('div', {class:'podium-name'}, p.name + (p.id===me.id ? ' (du)' : ''))),
+        el('div', {class:'podium-pts'}, `${group.score} Punkte`),
+        el('div', {class:'podium-bar'})
+      );
+    })
+  );
 }
 
 function render(){
