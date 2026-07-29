@@ -167,6 +167,19 @@
   }
   .round-btn{ width:auto; flex:1; }
   .round-btn.active{ background:var(--accent); color:var(--accent-ink); }
+  .cat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin:4px 0;
+  }
+  .cat-tile{
+    justify-content:center;
+    text-align:center;
+    padding:12px 10px;
+    font-weight:600;
+  }
+  .cat-tile-wide{ grid-column:1 / -1; }
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
   .confirm{ color:var(--accent); font-size:13px; font-weight:600; margin-top:6px; }
@@ -468,8 +481,7 @@ const QUESTIONS = [
 ];
 
 const CATEGORIES = ['Kuriosität', 'Wahr oder falsch?', 'Schräges Ereignis', 'Unbekanntes Wort'];
-const CATEGORY_MIXED = 'Gemischt';
-const CATEGORY_OPTIONS = [CATEGORY_MIXED, ...CATEGORIES];
+const CATEGORY_MIXED = 'Zufall';
 function questionCategory(q){ return q.cat || 'Kuriosität'; }
 
 // ---------- Firebase Setup ----------
@@ -903,18 +915,22 @@ function renderPlayers(){
   );
 }
 
-// Einfachauswahl-Chips für eine Kategorie (Gemischt + die vier echten
-// Kategorien). Wird sowohl im Warteraum (Runde 1) als auch auf dem
-// Auflösungs-Bildschirm (jede weitere Runde) verwendet.
+// Einfachauswahl-Kacheln für eine Kategorie: die vier echten Kategorien in
+// einem gleichmäßigen 2x2-Raster, „Zufall“ als eigene, volle Reihe darunter.
+// Wird sowohl im Warteraum (Runde 1) als auch auf dem Auflösungs-Bildschirm
+// (jede weitere Runde) verwendet.
 function renderCategoryChips(current, onPick){
-  return el('div', {class:'players'},
-    ...CATEGORY_OPTIONS.map(cat=>{
-      const active = current === cat;
-      const chip = el('div', {class:'chip selectable' + (active ? ' active' : '')}, cat);
-      chip.addEventListener('click', ()=>onPick(cat));
-      return chip;
-    })
-  );
+  const tiles = CATEGORIES.map(cat=>{
+    const active = current === cat;
+    const tile = el('div', {class:'chip selectable cat-tile' + (active ? ' active' : '')}, cat);
+    tile.addEventListener('click', ()=>onPick(cat));
+    return tile;
+  });
+  const active = current === CATEGORY_MIXED;
+  const mixedTile = el('div', {class:'chip selectable cat-tile cat-tile-wide' + (active ? ' active' : '')}, CATEGORY_MIXED);
+  mixedTile.addEventListener('click', ()=>onPick(CATEGORY_MIXED));
+  tiles.push(mixedTile);
+  return el('div', {class:'cat-grid'}, ...tiles);
 }
 
 function renderLobby(){
