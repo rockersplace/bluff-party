@@ -157,6 +157,16 @@
     background:var(--accent);
     flex-shrink:0;
   }
+  .chip.selectable{
+    cursor:pointer;
+    border:1px solid var(--border-strong);
+    transition:background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .chip.selectable.active{
+    background:var(--accent); color:#fff; border-color:var(--accent);
+  }
+  .round-btn{ width:auto; flex:1; }
+  .round-btn.active{ background:var(--accent); color:var(--accent-ink); }
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
   .confirm{ color:var(--accent); font-size:13px; font-weight:600; margin-top:6px; }
@@ -238,7 +248,7 @@ const firebaseConfig = {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {
   getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, runTransaction,
-  getDocs, writeBatch
+  getDocs, writeBatch, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 
@@ -391,8 +401,31 @@ const QUESTIONS = [
   {p:"In den 1960er-Jahren versuchte der US-Geheimdienst CIA im Rahmen eines echten (später eingestellten) Projekts, ____.", a:"eine Katze mit eingebauten Abhörgeräten als lebende Wanze einzusetzen („Operation Acoustic Kitty“)", cat:"Schräges Ereignis"},
   {p:"Bei der Erstürmung der Bastille 1789, die als Symbol der Französischen Revolution gilt, wurden tatsächlich nur ____ Gefangene befreit.", a:"sieben – eine überraschend kleine, aber gut dokumentierte Zahl", cat:"Schräges Ereignis"},
   {p:"1971 verzögerte sich bei der Apollo-14-Mission fast das Andockmanöver, bis die Besatzung das Problem mit ____ improvisiert löste.", a:"einem Kugelschreiber, mit dem ein defekter Schalter überbrückt wurde", cat:"Schräges Ereignis"},
-  {p:"Der Trickbetrüger Victor Lustig war in den 1920ern so überzeugend, dass er sogar ____.", a:"den berüchtigten Gangster Al Capone um Geld erleichterte und dabei glaubwürdig blieb", cat:"Schräges Ereignis"}
+  {p:"Der Trickbetrüger Victor Lustig war in den 1920ern so überzeugend, dass er sogar ____.", a:"den berüchtigten Gangster Al Capone um Geld erleichterte und dabei glaubwürdig blieb", cat:"Schräges Ereignis"},
+
+  // ---- Unbekanntes Wort ----
+  {p:"Was bedeutet das (im Alltag eher seltene) Wort „Kaldaunen“?", a:"Innereien von Schlachttieren, vor allem der Magen (auch „Kutteln“ genannt)", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Firlefanz“?", a:"unnützer, alberner Kram oder überflüssige Spielerei", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet der Ausdruck „Dreikäsehoch“?", a:"ein scherzhaftes Wort für ein sehr kleines Kind", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Kabuff“?", a:"ein winziger, enger Raum oder Verschlag, meist als Abstellkammer genutzt", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Schnickschnack“?", a:"unnötiger, überflüssiger Zierrat oder wertloses Beiwerk", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet der Ausdruck „Zwickmühle“?", a:"eine missliche Lage, in der man zwischen zwei unangenehmen Möglichkeiten wählen muss", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Hanswurst“?", a:"eine lustige, alberne, wenig ernstzunehmende Person", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Krakeel“?", a:"lautstarker Streit oder Lärm", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das (aus dem Französischen stammende) Wort „Petitesse“?", a:"eine belanglose Kleinigkeit", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Sammelsurium“?", a:"eine bunte, ungeordnete Mischung ganz verschiedener Dinge", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das (aus dem Lateinischen stammende) Wort „Quisquilien“?", a:"unbedeutende Kleinigkeiten, Nichtigkeiten", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Plunder“ (außerhalb der Bäckerei)?", a:"wertloser, alter Kram oder Gerümpel", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Firn“ (aus der Gletscherkunde)?", a:"alter, verharschter, körniger Schnee auf einem Gletscher, der einen Winter überdauert hat", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das norddeutsche Wort „töfte“?", a:"umgangssprachlich für „toll“ oder „großartig“", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Schabernack“?", a:"ein harmloser, neckender Streich", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Kladderadatsch“?", a:"ein lautes Durcheinander oder Chaos, oft mit Krach verbunden", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Muckefuck“?", a:"umgangssprachlich für minderwertigen Kaffee-Ersatz, z. B. aus geröstete Zichorie", cat:"Unbekanntes Wort"},
+  {p:"Was bedeutet das Wort „Schmökern“?", a:"gemütlich und ohne bestimmtes Ziel in einem Buch lesen oder darin stöbern", cat:"Unbekanntes Wort"}
 ];
+
+const CATEGORIES = ['Kuriosität', 'Wahr oder falsch?', 'Schräges Ereignis', 'Unbekanntes Wort'];
+function questionCategory(q){ return q.cat || 'Kuriosität'; }
 
 // ---------- Firebase Setup ----------
 const isConfigured = !!firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("DEIN_");
@@ -490,6 +523,7 @@ let unsubscribers = [];
 let localAnswerDraft = "";
 let errorMsg = "";
 let lobbyRoundsDraft = 8;
+let lobbyCategoriesDraft = [...CATEGORIES];
 let cache = { players: [], game: null, scores: {}, submissions: [], votes: [], hostId: null };
 
 // Fallback für Räume, die vor Einführung der Spielleitung erstellt wurden
@@ -509,6 +543,23 @@ function hostName(){
 function unsubscribeAll(){
   unsubscribers.forEach(u=>u());
   unsubscribers = [];
+}
+
+// Bringt zurück zum Startbildschirm. Löscht dabei den eigenen Spieler-Eintrag
+// aus Firestore (best effort) - sonst würde man als "Karteileiche" in der
+// Spieleranzahl der Zurückbleibenden weiterzählen.
+async function leaveRoom(){
+  try{
+    if(db && me.code){
+      await deleteDoc(doc(playersCol(), me.id));
+    }
+  }catch(e){ /* Raum evtl. schon weg o.ä. - egal, wir verlassen ihn trotzdem lokal */ }
+  clearStoredRoom();
+  unsubscribeAll();
+  joined = false;
+  me.code = "";
+  cache = { players: [], game: null, scores: {}, submissions: [], votes: [], hostId: null };
+  render();
 }
 
 function subscribeToRoom(){
@@ -579,9 +630,14 @@ async function joinRoom(name, code){
   render();
 }
 
-function pickQuestionIndex(used){
-  const free = QUESTIONS.map((_,i)=>i).filter(i=>!used.includes(i));
-  const pool = free.length ? free : QUESTIONS.map((_,i)=>i);
+function pickQuestionIndex(used, allowedCategories){
+  const cats = (allowedCategories && allowedCategories.length) ? allowedCategories : CATEGORIES;
+  const inCategory = QUESTIONS.map((_,i)=>i).filter(i=>cats.includes(questionCategory(QUESTIONS[i])));
+  const free = inCategory.filter(i=>!used.includes(i));
+  // Falls in den gewählten Kategorien schon alle Fragen dran waren, fängt
+  // der Kategorie-Pool einfach wieder von vorne an, statt Fragen aus einer
+  // nicht gewählten Kategorie zu nehmen.
+  const pool = free.length ? free : inCategory;
   return pool[Math.floor(Math.random()*pool.length)];
 }
 
@@ -608,13 +664,14 @@ function beautifyText(text){
   return t;
 }
 
-async function startGame(rounds){
+async function startGame(rounds, categories){
   if(cache.players.length < 2) return;
   const totalRounds = (rounds && rounds > 0) ? rounds : 8;
+  const cats = (categories && categories.length) ? categories : [...CATEGORIES];
   await transitionPhase('lobby', ()=>{
-    const qIndex = pickQuestionIndex([]);
+    const qIndex = pickQuestionIndex([], cats);
     const patch = buildRoundPatch(qIndex);
-    return { game: { round:1, usedQuestions:[qIndex], totalRounds, tally:null, votes:null, correctIdx:null, ...patch } };
+    return { game: { round:1, usedQuestions:[qIndex], totalRounds, categories: cats, tally:null, votes:null, correctIdx:null, ...patch } };
   });
 }
 
@@ -701,7 +758,7 @@ async function revealResults(){
 
 async function nextRound(){
   await transitionPhase('reveal', (game)=>{
-    const qIndex = pickQuestionIndex(game.usedQuestions);
+    const qIndex = pickQuestionIndex(game.usedQuestions, game.categories);
     const patch = buildRoundPatch(qIndex);
     return { game: {
       ...game, round: game.round+1,
@@ -766,14 +823,22 @@ function renderTopbar(){
     el('span', null, me.name),
     el('span', {class:'code'}, me.code)
   );
-  const nodes = [bar];
+  const actions = [];
+  // Verlassen darf jede Person jederzeit (betrifft nur einen selbst).
+  actions.push(el('button', {
+    class:'secondary',
+    style:'width:auto; padding:8px 14px; font-size:12px;',
+    onclick: ()=>{
+      if(confirm('Raum verlassen und zurück zum Startbildschirm?')) leaveRoom();
+    }
+  }, 'Raum verlassen'));
   // Reset ist nur der Spielleitung erlaubt (sonst könnten mehrere Leute
   // gleichzeitig gegensätzliche Aktionen auslösen) und nur, solange
   // überhaupt eine Partie läuft - im Warteraum gibt es nichts zurückzusetzen.
   if(isHost() && cache.game && cache.game.phase !== 'lobby'){
-    nodes.push(el('button', {
+    actions.push(el('button', {
       class:'danger',
-      style:'width:auto; padding:8px 14px; font-size:12px; margin-bottom:14px;',
+      style:'width:auto; padding:8px 14px; font-size:12px;',
       onclick: ()=>{
         if(confirm('Spiel wirklich zurücksetzen? Alle Antworten, Stimmen und Punkte gehen verloren - alle kommen zurück in den Warteraum.')){
           resetGame();
@@ -781,7 +846,7 @@ function renderTopbar(){
       }
     }, '↺ Spiel zurücksetzen'));
   }
-  return nodes;
+  return [bar, el('div', {style:'display:flex; gap:8px; margin-bottom:14px;'}, ...actions)];
 }
 
 function renderPlayers(){
@@ -795,24 +860,62 @@ function renderPlayers(){
 
 function renderLobby(){
   const enough = cache.players.length >= 2;
-  const roundsInput = el('input', {type:'text', inputmode:'numeric', placeholder:'z. B. 8'});
-  roundsInput.value = String(lobbyRoundsDraft);
-  roundsInput.addEventListener('input', e=>{
-    const digits = e.target.value.replace(/[^0-9]/g,'');
-    lobbyRoundsDraft = digits ? parseInt(digits,10) : '';
-  });
+
+  // Rundenzahl und Kategorien legt nur die Spielleitung fest - alle anderen
+  // sehen nur den Warteraum ohne diese Einstellungen.
+  if(!isHost()){
+    return el('div', null,
+      ...renderTopbar(),
+      el('div', {class:'card'},
+        el('h2', null, 'Warteraum'),
+        el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Jede Person schreibt und stimmt in jeder Runde mit – die App liest die Fragen vor.'),
+        renderPlayers(),
+        el('div', {class:'hint', style:'margin-top:10px'}, `${hostName()} wählt Rundenzahl und Kategorien und startet das Spiel, sobald genug Leute da sind.`)
+      )
+    );
+  }
+
+  const roundsRow = el('div', {class:'row'},
+    ...[4,6,8].map(r=>el('button', {
+      class: (lobbyRoundsDraft===r ? 'primary' : 'secondary') + ' round-btn',
+      onclick: ()=>{ lobbyRoundsDraft = r; render(); }
+    }, String(r)))
+  );
+
+  const catRow = el('div', {class:'players'},
+    ...CATEGORIES.map(cat=>{
+      const active = lobbyCategoriesDraft.includes(cat);
+      const chip = el('div', {class:'chip selectable' + (active ? ' active' : '')}, cat);
+      chip.addEventListener('click', ()=>{
+        if(active){
+          // mindestens eine Kategorie muss aktiv bleiben
+          if(lobbyCategoriesDraft.length > 1){
+            lobbyCategoriesDraft = lobbyCategoriesDraft.filter(c=>c!==cat);
+          }
+        } else {
+          lobbyCategoriesDraft = [...lobbyCategoriesDraft, cat];
+        }
+        render();
+      });
+      return chip;
+    })
+  );
+
   return el('div', null,
-    renderTopbar(),
+    ...renderTopbar(),
     el('div', {class:'card'},
       el('h2', null, 'Warteraum'),
       el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Jede Person schreibt und stimmt in jeder Runde mit – die App liest die Fragen vor.'),
       renderPlayers(),
       el('div', {style:'height:10px'}),
       el('label', null, 'Rundenzahl'),
-      roundsInput,
-      el('div', {class:'hint', style:'margin-bottom:12px'}, `Punkte: ${POINTS_CORRECT_GUESS} für die richtige Antwort erraten, ${POINTS_PER_FOOLED} für jede Person, die auf deine erfundene Antwort hereinfällt.`),
+      roundsRow,
+      el('div', {style:'height:14px'}),
+      el('label', null, 'Kategorien (mindestens eine auswählen)'),
+      catRow,
+      el('div', {class:'hint', style:'margin:10px 0 12px'}, `Punkte: ${POINTS_CORRECT_GUESS} für die richtige Antwort erraten, ${POINTS_PER_FOOLED} für jede Person, die auf deine erfundene Antwort hereinfällt.`),
       el('button', {class:'primary', disabled: !enough ? 'true' : undefined,
-        onclick: ()=>startGame(lobbyRoundsDraft && lobbyRoundsDraft>0 ? lobbyRoundsDraft : 8)
+        onclick: ()=>startGame(lobbyRoundsDraft, lobbyCategoriesDraft)
       }, enough ? 'Spiel starten' : `Noch ${2-cache.players.length} Spieler:in(nen) nötig`)
     )
   );
