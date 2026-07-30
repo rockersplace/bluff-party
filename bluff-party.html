@@ -645,11 +645,24 @@ function hostName(){
 // Spielleitung (fix, für Start/Reset zuständig) steuert die/der Vorleser:in
 // nur den Ablauf der jeweils eigenen Runde: sieht/schreibt bei normalen
 // Fragen die echte Antwort, liest alle Antworten vor und schaltet weiter.
+// Liefert die tatsächlich gültige Vorleser:in-ID. Normalerweise einfach
+// game.readerId - aber falls diese ID zu niemandem mehr im Raum gehört (z.B.
+// weil die vorlesende Person über einen neuen Inkognito-Tab mit neuer lokaler
+// ID zurückgekehrt ist oder den Raum verlassen hat), würde SONST niemand mehr
+// als Vorleser:in erkannt: kein "Weiter"-Button mehr, und der Abstimm-
+// Ausschluss der Vorleser:in würde ins Leere laufen. Als Fallback übernimmt
+// in diesem Fall die erste Person der Spielerliste.
+function effectiveReaderId(){
+  if(!cache.game) return null;
+  const rid = cache.game.readerId;
+  if(cache.players.some(p=>p.id===rid)) return rid;
+  return cache.players.length ? cache.players[0].id : rid;
+}
 function isReader(){
-  return !!cache.game && cache.game.readerId === me.id;
+  return !!cache.game && effectiveReaderId() === me.id;
 }
 function readerName(){
-  const rid = cache.game && cache.game.readerId;
+  const rid = effectiveReaderId();
   const r = cache.players.find(p=>p.id===rid);
   return r ? r.name : 'Vorleser:in';
 }
@@ -907,7 +920,7 @@ async function nextRound(category){
     const patch = buildRoundPatch(qIndex);
     // Vorleser:in rotiert reihum zur nächsten Person in der Spieler:innen-
     // Liste (nach Beitrittsreihenfolge), wieder von vorne, wenn alle dran waren.
-    const curIdx = cache.players.findIndex(p=>p.id===game.readerId);
+    const curIdx = cache.players.findIndex(p=>p.id===effectiveReaderId());
     const nextReaderId = cache.players.length
       ? cache.players[(curIdx+1) % cache.players.length].id
       : game.readerId;
@@ -1190,7 +1203,7 @@ function renderVoting(){
   // Vorleser:in die Antwort schon und stimmt deshalb nicht mit ab.
   const isTrueFalse = q.type === 'truefalse';
   const readerVotes = !isTrueFalse;
-  const eligibleVoters = readerVotes ? cache.players.filter(p=>p.id!==game.readerId) : cache.players;
+  const eligibleVoters = readerVotes ? cache.players.filter(p=>p.id!==effectiveReaderId()) : cache.players;
   const total = eligibleVoters.length;
   const donePids = new Set(cache.votes.filter(v=>v.round===round).map(v=>v.pid));
   const iAmVotingReader = readerVotes && isReader();
@@ -1198,8 +1211,12 @@ function renderVoting(){
   const optionEls = game.options.map((opt, idx)=>{
     const isMine = opt.authorId === me.id;
     const isSelected = myVote && myVote.optionIdx===idx;
+    // Beim Abstimmen wird bewusst NUR der Buchstabe gezeigt, nicht der
+    // Antworttext - sonst könnte man Handschrift/Formulierungsstil einzelner
+    // Personen wiedererkennen. Die Texte werden erst in der Auflösung
+    // (renderReveal) den Buchstaben zugeordnet und angezeigt.
     const card = el('div', {class:'option-card' + (isSelected?' selected':'')},
-      el('div', {class:'option-text'}, `${letterFor(idx)})  ${opt.text}`),
+      el('div', {class:'option-text'}, `${letterFor(idx)})`),
       isMine ? el('div', {class:'option-meta'}, 'Das ist deine eigene Antwort') : null
     );
     // Nicht auf die eigene Antwort klickbar, und die/der Vorleser:in stimmt
@@ -1426,6 +1443,22 @@ async function boot(){
   }
   render();
 }
+
+// Mobile Browser (v.a. iOS Safari, auch als "Zum Home-Bildschirm hinzugefügt")
+// frieren die WebSocket-Verbindung der Firestore-Listener ein, sobald der Tab
+// in den Hintergrund geht (Bildschirm sperren, App wechseln). Ohne diesen
+// Handler blieb die Ansicht danach auf altem Stand hängen, bis man manuell
+// neu geladen hat. Beim Zurückkehren wird einfach neu abonniert - das liefert
+// sofort den aktuellen Serverstand und reaktiviert die Live-Updates.
+function resubscribeIfNeeded(){
+  if(joined) subscribeToRoom();
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') resubscribeIfNeeded();
+});
+window.addEventListener('focus', resubscribeIfNeeded);
+window.addEventListener('online', resubscribeIfNeeded);
+window.addEventListener('pageshow', resubscribeIfNeeded);
 
 boot();
 </script>
