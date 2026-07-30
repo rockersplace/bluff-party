@@ -197,11 +197,11 @@
   }
   .podium-pts{ font-size:11px; color:var(--muted); margin-bottom:8px; }
   .podium-bar{ width:100%; border-radius:12px 12px 0 0; }
-  .place-1{ order:2; animation-delay:.4s; }
+  .place-1{ order:2; }
   .place-1 .podium-bar{ height:86px; background:linear-gradient(180deg, var(--accent), #ffb066); }
-  .place-2{ order:1; animation-delay:.2s; }
+  .place-2{ order:1; }
   .place-2 .podium-bar{ height:60px; background:#c7cce0; }
-  .place-3{ order:3; animation-delay:0s; }
+  .place-3{ order:3; }
   .place-3 .podium-bar{ height:40px; background:#e3bd94; }
   @keyframes podiumIn{
     to{ opacity:1; transform:translateY(0); }
@@ -209,6 +209,15 @@
   .muted{ color:var(--muted); font-size:13px; }
   .hint{ color:var(--muted); font-size:12px; line-height:1.5; margin-top:6px;}
   .confirm{ color:var(--accent); font-size:13px; font-weight:600; margin-top:6px; }
+  .answer-reveal{
+    background:var(--correct-bg);
+    border:1px solid rgba(244,128,31,.4);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    font-size:14px;
+    margin-bottom:14px;
+  }
+  .answer-reveal b{ color:var(--accent); }
   .question{
     font-weight:600;
     font-size:19px;
@@ -609,8 +618,11 @@ let me = { id: loadOrCreateId(), name: "", code: "" };
 let joined = false;
 let unsubscribers = [];
 let localAnswerDraft = "";
+let localAnswerDraftRound = null;
 let errorMsg = "";
 let lobbyRoundsDraft = 8;
+let podiumRevealStep = 0;
+let podiumRevealRound = null;
 let lobbyCategoryDraft = CATEGORY_MIXED;
 let nextCategoryDraft = CATEGORY_MIXED;
 let cache = { players: [], game: null, scores: {}, submissions: [], votes: [], hostId: null };
@@ -627,6 +639,22 @@ function isHost(){
 function hostName(){
   const h = cache.hostId ? cache.players.find(p=>p.id===cache.hostId) : cache.players[0];
   return h ? h.name : 'Spielleiter:in';
+}
+
+// Vorleser:in wechselt jede Runde reihum (siehe nextRound). Anders als die
+// Spielleitung (fix, für Start/Reset zuständig) steuert die/der Vorleser:in
+// nur den Ablauf der jeweils eigenen Runde: sieht/schreibt bei normalen
+// Fragen die echte Antwort, liest alle Antworten vor und schaltet weiter.
+function isReader(){
+  return !!cache.game && cache.game.readerId === me.id;
+}
+function readerName(){
+  const rid = cache.game && cache.game.readerId;
+  const r = cache.players.find(p=>p.id===rid);
+  return r ? r.name : 'Vorleser:in';
+}
+function letterFor(idx){
+  return String.fromCharCode(65 + idx);
 }
 
 function unsubscribeAll(){
@@ -655,7 +683,16 @@ function subscribeToRoom(){
   unsubscribeAll();
   unsubscribers.push(onSnapshot(roomRef(), snap=>{
     const data = snap.data();
-    cache.game = data ? data.game : null;
+    const newGame = data ? data.game : null;
+    // Podium-Enthüllung für ALLE Geräte zurücksetzen, sobald ein neues Spiel
+    // beginnt (Übergang in die Lobby-Phase) - nicht nur bei der Person, die
+    // "Neues Spiel starten" geklickt hat, sonst bliebe der alte Enthüllungs-
+    // Fortschritt bei den anderen fälschlich stehen.
+    if(newGame && newGame.phase === 'lobby' && (!cache.game || cache.game.phase !== 'lobby')){
+      podiumRevealStep = 0;
+      podiumRevealRound = null;
+    }
+    cache.game = newGame;
     cache.scores = data ? (data.scores || {}) : {};
     cache.hostId = data ? (data.hostId || null) : null;
     render();
@@ -691,6 +728,20 @@ function countVotesForRound(round){
 }
 
 // ---------- Actions ----------
+// Legt den Raum sofort an, wenn jemand einen neuen Code erzeugt - noch bevor
+// der Code geteilt wird. So gewinnt garantiert diese Person das hostId-Rennen
+// und wird Spielleitung, statt dass es vom Zufall abhängt, wer nachher als
+// Erstes erfolgreich "Raum beitreten" klickt.
+async function createRoom(code){
+  try{
+    await ensureAuth();
+    await setDoc(doc(db, 'rooms', code), { game: initialGame(), scores: {}, hostId: me.id });
+  }catch(e){
+    errorMsg = "Raum erstellen fehlgeschlagen: " + (e && e.message ? e.message : String(e));
+    render();
+  }
+}
+
 async function joinRoom(name, code){
   errorMsg = "";
   name = name.trim(); code = code.trim().toUpperCase();
@@ -742,14 +793,16 @@ function buildRoundPatch(qIndex){
   return { phase: "writing", questionIndex: qIndex, options: null };
 }
 
+// Nur noch Leerzeichen/doppelte Satzzeichen bereinigen - KEINE erzwungene
+// Groß-/Kleinschreibung am Anfang und KEIN erzwungener Punkt am Ende mehr:
+// Die echten Antworten im Fragenkatalog beginnen meist klein und enden ohne
+// Punkt, ein automatisch angeglichener Text hätte erfundene Antworten also
+// gerade verräterisch anders aussehen lassen als die echten.
 function beautifyText(text){
   let t = text.trim().replace(/\s+/g, ' ');
   if(t.length === 0) return t;
-  t = t.charAt(0).toUpperCase() + t.slice(1);
-  t = t.replace(/([.!?]\s+)([a-zäöüß])/g, (m,p1,p2)=>p1+p2.toUpperCase());
   t = t.replace(/([.!?]){2,}/g, '$1');
   t = t.replace(/\s+([,.!?])/g, '$1');
-  if(!/[.!?]$/.test(t)) t += '.';
   return t;
 }
 
@@ -759,7 +812,7 @@ async function startGame(rounds, category){
   await transitionPhase('lobby', ()=>{
     const qIndex = pickQuestionIndex([], category);
     const patch = buildRoundPatch(qIndex);
-    return { game: { round:1, usedQuestions:[qIndex], totalRounds, tally:null, votes:null, correctIdx:null, ...patch } };
+    return { game: { round:1, readerId: cache.players[0].id, usedQuestions:[qIndex], totalRounds, tally:null, votes:null, correctIdx:null, ...patch } };
   });
 }
 
@@ -798,6 +851,10 @@ async function submitAnswer(text){
 
 async function goToVoting(){
   await transitionPhase('writing', (game)=>{
+    // Die echte Antwort wird automatisch mit in die Auswahl aufgenommen -
+    // die/der Vorleser:in schreibt zusätzlich eine EIGENE erfundene Antwort
+    // (wie alle anderen auch), damit sie/er auch in der eigenen Runde punkten
+    // kann, statt zwangsläufig leer auszugehen.
     const subs = cache.submissions
       .filter(s=>s.round===game.round)
       .map(s=>({ authorId: s.pid, text: s.text }));
@@ -848,8 +905,14 @@ async function nextRound(category){
   await transitionPhase('reveal', (game)=>{
     const qIndex = pickQuestionIndex(game.usedQuestions, category);
     const patch = buildRoundPatch(qIndex);
+    // Vorleser:in rotiert reihum zur nächsten Person in der Spieler:innen-
+    // Liste (nach Beitrittsreihenfolge), wieder von vorne, wenn alle dran waren.
+    const curIdx = cache.players.findIndex(p=>p.id===game.readerId);
+    const nextReaderId = cache.players.length
+      ? cache.players[(curIdx+1) % cache.players.length].id
+      : game.readerId;
     return { game: {
-      ...game, round: game.round+1,
+      ...game, round: game.round+1, readerId: nextReaderId,
       usedQuestions:[...game.usedQuestions, qIndex],
       tally:null, votes:null, correctIdx:null, ...patch
     } };
@@ -885,7 +948,11 @@ function renderJoinScreen(){
   codeInput.addEventListener('input', e=>{ me.code = e.target.value.toUpperCase(); });
 
   const joinBtn = el('button', {class:'primary', onclick: ()=>joinRoom(nameInput.value, codeInput.value)}, 'Raum beitreten');
-  const createBtn = el('button', {class:'secondary', onclick: ()=>{ const c = makeCode(); codeInput.value = c; me.code = c; }}, 'Neuen Raumcode erzeugen');
+  const createBtn = el('button', {class:'secondary', onclick: async ()=>{
+    const c = makeCode();
+    codeInput.value = c; me.code = c;
+    await createRoom(c);
+  }}, 'Neuen Raumcode erzeugen');
 
   return el('div', null,
     renderBrand(),
@@ -974,7 +1041,7 @@ function renderLobby(){
       ...renderTopbar(),
       el('div', {class:'card'},
         el('h2', null, 'Warteraum'),
-        el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Jede Person schreibt und stimmt in jeder Runde mit – die App liest die Fragen vor.'),
+        el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Die Vorleser:in-Rolle wechselt jede Runde reihum: Wer dran ist, sieht die echte Antwort, erfindet trotzdem eine eigene und liest am Ende alle Antworten vor.'),
         renderPlayers(),
         el('div', {class:'hint', style:'margin-top:10px'}, `${hostName()} wählt Rundenzahl und Kategorie und startet das Spiel, sobald genug Leute da sind.`)
       )
@@ -992,7 +1059,7 @@ function renderLobby(){
     ...renderTopbar(),
     el('div', {class:'card'},
       el('h2', null, 'Warteraum'),
-      el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Jede Person schreibt und stimmt in jeder Runde mit – die App liest die Fragen vor.'),
+      el('p', {class:'muted'}, 'Wartet, bis mindestens 2 Spieler:innen da sind. Die Vorleser:in-Rolle wechselt jede Runde reihum: Wer dran ist, sieht die echte Antwort, erfindet trotzdem eine eigene und liest am Ende alle Antworten vor.'),
       renderPlayers(),
       el('div', {style:'height:10px'}),
       el('label', null, 'Rundenzahl'),
@@ -1016,59 +1083,95 @@ function renderWriting(){
   const total = cache.players.length;
   const mySubmission = cache.submissions.find(s=>s.round===round && s.pid===me.id);
   const donePids = new Set(cache.submissions.filter(s=>s.round===round).map(s=>s.pid));
+  const iAmReader = isReader();
 
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
   const ta = el('textarea', {
     placeholder:'Denk dir eine möglichst überzeugende, aber erfundene Antwort aus …',
     spellcheck:'true', lang:'de', autocapitalize:'sentences', autocorrect:'on'
   });
-  // Nach einem Neuladen der Seite (z.B. Handy hat den Tab neu geladen) ist
-  // localAnswerDraft leer, obwohl die Antwort schon abgeschickt wurde -
-  // deshalb hier die bereits gespeicherte Antwort ins Feld vorbefüllen,
-  // statt eine scheinbar leere/verlorene Antwort zu zeigen.
-  const startValue = localAnswerDraft || (mySubmission ? mySubmission.text : "");
-  ta.value = startValue;
+  // localAnswerDraft ist ein Modul-weiter Zwischenspeicher fürs Textfeld.
+  // Ohne diesen Reset würde ein alter, nie abgeschickter Entwurf aus einer
+  // früheren Runde (z.B. weil die Vorlesende Person schon weitergeklickt hat,
+  // bevor man fertig war) fälschlich in einer späteren Runde wieder auftauchen.
+  if(localAnswerDraftRound !== round){
+    localAnswerDraft = mySubmission ? mySubmission.text : "";
+    localAnswerDraftRound = round;
+  }
+  ta.value = localAnswerDraft;
   ta.addEventListener('input', e=>{ localAnswerDraft = e.target.value; });
 
   const body = [
-    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
-    el('div', {class:'question'}, q.p),
-    el('label', null, 'Deine erfundene Antwort'),
-    ta,
-    el('button', {class:'primary', onclick: async ()=>{ await submitAnswer(ta.value); } }, mySubmission ? 'Antwort aktualisieren' : 'Antwort abschicken'),
-    mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null,
-    el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren). Groß-/Kleinschreibung und Satzzeichen am Ende werden beim Abschicken zusätzlich automatisch angeglichen, damit Tippfehler nicht verraten, wer geschrieben hat.'),
-    el('div', {class:'progress'}, `${n} von ${total} Antworten sind da.`),
-    ...renderAdvanceControl(n, total, goToVoting, 'Weiter zur Abstimmung', donePids)
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName()}`),
+    el('div', {class:'question'}, q.p)
   ];
 
+  if(iAmReader){
+    // Nur die/der Vorleser:in sieht die echte Antwort. Die wird automatisch
+    // mit in die Auswahl aufgenommen - hier schreibt die/der Vorleser:in
+    // trotzdem eine EIGENE erfundene Antwort, genau wie alle anderen auch,
+    // damit sie/er in der eigenen Runde ebenfalls punkten kann.
+    body.push(
+      el('div', {class:'answer-reveal'}, el('b', null, 'Echte Antwort (nur du siehst das, wird automatisch mit aufgenommen): '), q.a),
+      el('label', null, 'Deine erfundene Antwort'),
+      ta,
+      el('button', {class:'primary', onclick: async ()=>{ await submitAnswer(ta.value); } }, mySubmission ? 'Antwort aktualisieren' : 'Antwort abschicken'),
+      mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null
+    );
+  } else {
+    body.push(
+      el('label', null, 'Deine erfundene Antwort'),
+      ta,
+      el('button', {class:'primary', onclick: async ()=>{ await submitAnswer(ta.value); } }, mySubmission ? 'Antwort aktualisieren' : 'Antwort abschicken'),
+      mySubmission ? el('div', {class:'confirm'}, '✓ Antwort gesendet – du kannst sie noch ändern, solange die Runde läuft.') : null,
+      el('div', {class:'hint'}, 'Die Rechtschreibprüfung deines Handys ist aktiv (rot unterstrichene Wörter antippen zum Korrigieren).')
+    );
+  }
+
+  body.push(
+    el('div', {class:'progress'}, `${n} von ${total} Antworten sind da.`),
+    ...renderAdvanceControl(n, total, goToVoting, 'Weiter zur Abstimmung', donePids)
+  );
+
   const card = el('div', {class:'card'}, ...body);
-  return el('div', null, renderTopbar(), card);
+  return el('div', null, ...renderTopbar(), card);
 }
 
-// Zeigt der Spielleitung einen "Weiter"-Button - der Button ist absichtlich
-// NIE hart gesperrt, auch wenn die Zählung nicht exakt aufgeht (z.B. weil
-// ein alter, inzwischen inaktiver Spieler-Eintrag aus einem früheren Test
-// noch in der Datenbank mitzählt). Sonst könnte die Spielleitung für immer
-// feststecken, wenn eine erwartete Antwort/Stimme nie kommt. Allen anderen
-// zeigt es nur einen Hinweis, wer gerade weiterschaltet. Zusätzlich werden
-// namentlich die Personen genannt, auf die noch gewartet wird (statt nur
-// einer Zahl), damit man in der Gruppe direkt weiß, wer noch dran ist.
-function renderAdvanceControl(n, total, onAdvance, label, donePids){
+// Zeigt der/dem Vorleser:in (Spielleitung der jeweiligen Runde) einen
+// "Weiter"-Button - der Button ist absichtlich NIE hart gesperrt, auch wenn
+// die Zählung nicht exakt aufgeht (z.B. weil ein alter, inzwischen inaktiver
+// Spieler-Eintrag aus einem früheren Test noch in der Datenbank mitzählt).
+// Sonst könnte man für immer feststecken, wenn eine erwartete Antwort/Stimme
+// nie kommt. Allen anderen zeigt es nur einen Hinweis, wer gerade
+// weiterschaltet. Zusätzlich werden namentlich die Personen genannt, auf die
+// noch gewartet wird (statt nur einer Zahl).
+function renderAdvanceControl(n, total, onAdvance, label, donePids, eligiblePlayers){
   const enough = n >= total;
   const nodes = [];
-  if(isHost()){
+  const pool = eligiblePlayers || cache.players;
+  if(isReader()){
+    const missingNow = donePids ? pool.filter(p=>!donePids.has(p.id)).map(p=>p.name) : [];
     nodes.push(el('button', {
       class:'primary', style:'margin-top:10px',
-      onclick: onAdvance
+      onclick: ()=>{
+        if(enough){ onAdvance(); return; }
+        // Absichtlich nicht hart gesperrt (siehe Kommentar oben), aber eine
+        // Sicherheitsabfrage verhindert das versehentliche Weiterklicken,
+        // bevor tatsächlich alle fertig sind (führte sonst z.B. dazu, dass
+        // eine noch nicht abgeschickte Antwort einfach fehlte).
+        const warn = missingNow.length
+          ? `Es haben noch nicht alle geantwortet/abgestimmt (es fehlt: ${missingNow.join(', ')}). Trotzdem weiter?`
+          : 'Es haben noch nicht alle geantwortet/abgestimmt. Trotzdem weiter?';
+        if(confirm(warn)) onAdvance();
+      }
     }, enough ? label : `${label} (${n} von ${total} fertig)`));
   } else {
     nodes.push(el('div', {class:'hint', style:'margin-top:10px'},
-      `${hostName()} kann jederzeit weitergehen (${n} von ${total} fertig).`
+      `${readerName()} kann jederzeit weitergehen (${n} von ${total} fertig).`
     ));
   }
   if(!enough && donePids){
-    const missing = cache.players.filter(p=>!donePids.has(p.id)).map(p=>p.name);
+    const missing = pool.filter(p=>!donePids.has(p.id)).map(p=>p.name);
     if(missing.length){
       nodes.push(el('div', {class:'hint', style:'margin-top:4px'}, `Es fehlt noch: ${missing.join(', ')}.`));
     }
@@ -1082,17 +1185,28 @@ function renderVoting(){
   const round = game.round;
   const myVote = cache.votes.find(v=>v.round===round && v.pid===me.id);
   const n = countVotesForRound(round);
-  const total = cache.players.length;
+  // Bei Wahr/Falsch-Fragen gibt es keine Vorlese-Ausnahme (siehe unten) -
+  // dort stimmen wie gehabt alle ab. Bei allen anderen Fragen kennt die/der
+  // Vorleser:in die Antwort schon und stimmt deshalb nicht mit ab.
+  const isTrueFalse = q.type === 'truefalse';
+  const readerVotes = !isTrueFalse;
+  const eligibleVoters = readerVotes ? cache.players.filter(p=>p.id!==game.readerId) : cache.players;
+  const total = eligibleVoters.length;
   const donePids = new Set(cache.votes.filter(v=>v.round===round).map(v=>v.pid));
+  const iAmVotingReader = readerVotes && isReader();
 
   const optionEls = game.options.map((opt, idx)=>{
     const isMine = opt.authorId === me.id;
     const isSelected = myVote && myVote.optionIdx===idx;
     const card = el('div', {class:'option-card' + (isSelected?' selected':'')},
-      el('div', {class:'option-text'}, opt.text),
+      el('div', {class:'option-text'}, `${letterFor(idx)})  ${opt.text}`),
       isMine ? el('div', {class:'option-meta'}, 'Das ist deine eigene Antwort') : null
     );
-    if(!isMine && !myVote){
+    // Nicht auf die eigene Antwort klickbar, und die/der Vorleser:in stimmt
+    // bei normalen Fragen gar nicht ab (kennt die Antwort ja schon). Alle
+    // anderen Optionen bleiben auch nach dem ersten Tippen anklickbar, damit
+    // man sich noch umentscheiden kann, solange die Runde läuft.
+    if(!isMine && !iAmVotingReader){
       card.addEventListener('click', ()=>castVote(idx));
     }
     return card;
@@ -1100,17 +1214,22 @@ function renderVoting(){
 
   const roundLabel = game.totalRounds ? `Runde ${game.round} von ${game.totalRounds}` : `Runde ${game.round}`;
   const body = [
-    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel}`),
+    el('div', {class:'muted'}, `${q.cat || 'Kuriosität'} · ${roundLabel} · Vorleser:in: ${readerName()}`),
     el('div', {class:'question'}, q.p),
-    ...optionEls,
-    el('div', {class:'progress'}, myVote
-      ? `${n} von ${total} Stimmen abgegeben.`
-      : 'Tippe auf die Antwort, die du für die echte hältst.'),
-    ...(myVote ? renderAdvanceControl(n, total, revealResults, 'Auflösung zeigen', donePids) : [])
+    ...optionEls
   ];
 
+  if(iAmVotingReader){
+    body.push(el('div', {class:'hint'}, 'Du liest laut vor und stimmst selbst nicht mit ab - du kennst die Antwort ja schon.'));
+  } else {
+    body.push(el('div', {class:'progress'}, myVote
+      ? `${n} von ${total} Stimmen abgegeben. Du kannst deine Wahl noch ändern.`
+      : 'Tippe auf die Antwort, die du für die echte hältst.'));
+  }
+  body.push(...renderAdvanceControl(n, total, revealResults, 'Auflösung zeigen', donePids, eligibleVoters));
+
   const card = el('div', {class:'card'}, ...body);
-  return el('div', null, renderTopbar(), card);
+  return el('div', null, ...renderTopbar(), card);
 }
 
 function renderReveal(){
@@ -1122,7 +1241,7 @@ function renderReveal(){
     const author = cache.players.find(p=>p.id===opt.authorId) || null;
     const card = el('div', {class:'option-card ' + (isCorrect ? 'correct' : '')},
       el('div', {class:'stamp ' + (isCorrect?'wahr':'erfunden')}, isCorrect ? 'WAHR' : 'ERFUNDEN'),
-      el('div', {class:'option-text'}, opt.text),
+      el('div', {class:'option-text'}, `${letterFor(idx)})  ${opt.text}`),
       el('div', {class:'option-meta'},
         isCorrect ? 'Richtige Antwort' : (author ? `Erfunden von ${author.name}` : 'Falsche Option'),
         ` · ${votesFor} Stimme(n)`
@@ -1151,27 +1270,50 @@ function renderReveal(){
     const podiumGroups = groups.slice(0,3);
     const restGroups = groups.slice(3);
 
+    // Spannung: erst 3. Platz, dann 2., dann 1. - jeweils per Klick der
+    // Spielleitung enthüllt, statt alles auf einmal zu zeigen. Zurückgesetzt
+    // pro Endrunde (podiumRevealRound), damit ein neues Spiel wieder bei
+    // null anfängt.
+    if(podiumRevealRound !== game.round){
+      podiumRevealStep = 0;
+      podiumRevealRound = game.round;
+    }
+    const revealOrder = [2,1,0].filter(i=>podiumGroups[i]);
+    const revealedIndices = new Set(revealOrder.slice(0, podiumRevealStep));
+    const allRevealed = podiumRevealStep >= revealOrder.length;
+
     body.push(
       el('div', {class:'muted'}, `Letzte Runde (${game.round} von ${game.totalRounds}) gespielt 🎉`),
       el('h3', null, 'Siegerehrung'),
-      renderPodium(podiumGroups)
+      renderPodium(podiumGroups, revealedIndices)
     );
-    if(restGroups.length){
-      let rank = podiumGroups.reduce((sum,g)=>sum+g.players.length, 0) + 1;
-      restGroups.forEach(g=>{
-        g.players.forEach(p=>{
-          body.push(el('div', {class:'scoreboard-row'},
-            el('span', null, `${rank}. ${p.name}${p.id===me.id?' (du)':''}`),
-            el('span', {class:'pts'}, String(g.score))
-          ));
-        });
-        rank += g.players.length;
-      });
-    }
-    if(isHost()){
-      body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
+
+    if(!allRevealed){
+      const nextIdx = revealOrder[podiumRevealStep];
+      const placeLabel = nextIdx===0 ? '1. Platz' : nextIdx===1 ? '2. Platz' : '3. Platz';
+      if(isHost()){
+        body.push(el('button', {class:'primary', style:'margin-top:10px', onclick: ()=>{ podiumRevealStep++; render(); }}, `${placeLabel} enthüllen`));
+      } else {
+        body.push(el('div', {class:'hint', style:'margin-top:10px'}, `${hostName()} enthüllt gleich den ${placeLabel}.`));
+      }
     } else {
-      body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} kann ein neues Spiel starten.`));
+      if(restGroups.length){
+        let rank = podiumGroups.reduce((sum,g)=>sum+g.players.length, 0) + 1;
+        restGroups.forEach(g=>{
+          g.players.forEach(p=>{
+            body.push(el('div', {class:'scoreboard-row'},
+              el('span', null, `${rank}. ${p.name}${p.id===me.id?' (du)':''}`),
+              el('span', {class:'pts'}, String(g.score))
+            ));
+          });
+          rank += g.players.length;
+        });
+      }
+      if(isHost()){
+        body.push(el('button', {class:'primary', style:'margin-top:14px', onclick: resetGame}, 'Neues Spiel starten'));
+      } else {
+        body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} kann ein neues Spiel starten.`));
+      }
     }
   } else {
     body.push(
@@ -1181,7 +1323,7 @@ function renderReveal(){
         el('span', {class:'pts'}, String(cache.scores[p.id]||0))
       ))
     );
-    if(isHost()){
+    if(isReader()){
       body.push(
         el('div', {style:'height:10px'}),
         el('label', null, 'Kategorie für die nächste Runde'),
@@ -1189,7 +1331,7 @@ function renderReveal(){
         el('button', {class:'primary', style:'margin-top:14px', onclick: ()=>nextRound(nextCategoryDraft)}, 'Nächste Runde')
       );
     } else {
-      body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${hostName()} wählt die nächste Kategorie und startet die nächste Runde.`));
+      body.push(el('div', {class:'hint', style:'margin-top:14px'}, `${readerName()} wählt die nächste Kategorie und startet die nächste Runde.`));
     }
   }
 
@@ -1212,14 +1354,23 @@ function groupByScore(players, scores){
 }
 
 // Podium mit den ersten drei Punkte-Gruppen (2.-1.-3. von links nach rechts,
-// wie bei einer echten Siegerehrung), inkl. kleiner Einblend-Animation je
-// Platz. Bei Punktegleichstand stehen mehrere Namen auf derselben Stufe.
-function renderPodium(podiumGroups){
+// wie bei einer echten Siegerehrung). Noch nicht enthüllte Plätze (siehe
+// revealedIndices) werden als "?"-Platzhalter gezeigt, damit die Spannung
+// bis zum letzten Klick erhalten bleibt. Bei Punktegleichstand stehen
+// mehrere Namen auf derselben Stufe.
+function renderPodium(podiumGroups, revealedIndices){
   const medals = ['🥇','🥈','🥉'];
   const displayOrder = [1,0,2];
   return el('div', {class:'podium'},
     ...displayOrder.filter(i=>podiumGroups[i]).map(i=>{
       const group = podiumGroups[i];
+      if(!revealedIndices.has(i)){
+        return el('div', {class:`podium-place place-${i+1}`},
+          el('div', {class:'podium-medal'}, '❓'),
+          el('div', {class:'podium-pts'}, '?'),
+          el('div', {class:'podium-bar'})
+        );
+      }
       return el('div', {class:`podium-place place-${i+1}`},
         el('div', {class:'podium-medal'}, medals[i]),
         ...group.players.map(p=>el('div', {class:'podium-name'}, p.name + (p.id===me.id ? ' (du)' : ''))),
